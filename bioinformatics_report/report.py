@@ -585,7 +585,12 @@ class Report:
         date: str | None = None,
         run_label: str = "",
         run_status: str = "",
+        run_label_prefix: str = "pipeline",
+        sidebar_footer: str = "",
         logo_path: str | Path | None = None,
+        logo_alt: str = "",
+        logo_width: str = "160px",
+        logo_height: str = "auto",
         footer_left: str = "",
         footer_right: str = "",
         extra_css: str | Path | None = None,
@@ -601,7 +606,12 @@ class Report:
         self.date = _validate_optional_str(date, "date") or str(datetime.date.today())
         self.run_label = _validate_str(run_label, "run_label")
         self.run_status = _validate_str(run_status, "run_status")
+        self.run_label_prefix = _validate_str(run_label_prefix, "run_label_prefix")
+        self.sidebar_footer = _validate_str(sidebar_footer, "sidebar_footer")
         self.logo_path = _validate_path(logo_path, "logo_path", must_exist=False)
+        self.logo_alt = _validate_str(logo_alt, "logo_alt")
+        self.logo_width = _validate_str(logo_width, "logo_width")
+        self.logo_height = _validate_str(logo_height, "logo_height")
         self.footer_left = _validate_str(footer_left, "footer_left")
         self.footer_right = _validate_str(footer_right, "footer_right")
         self.extra_css = _validate_path(extra_css, "extra_css", must_exist=False)
@@ -629,6 +639,37 @@ class Report:
         section = Section(number=number, title=title, count=count)
         self._sections.append(section)
         return section
+
+    def set_logo(
+        self,
+        path: str | Path | None,
+        alt: str | None = None,
+        width: str | None = None,
+        height: str | None = None,
+    ) -> Report:
+        """Configure the sidebar logo.
+
+        SVG logos are embedded inline; PNG/JPG logos are copied to the assets
+        directory. Pass ``None`` to fall back to the generic placeholder.
+        """
+        self.logo_path = _validate_path(path, "logo path", must_exist=False)
+        if alt is not None:
+            self.logo_alt = _validate_str(alt, "logo alt")
+        if width is not None:
+            self.logo_width = _validate_str(width, "logo width")
+        if height is not None:
+            self.logo_height = _validate_str(height, "logo height")
+        return self
+
+    def set_sidebar_footer(self, text: str) -> Report:
+        """Set the small status text shown at the bottom of the sidebar."""
+        self.sidebar_footer = _validate_str(text, "sidebar footer")
+        return self
+
+    def set_run_label_prefix(self, text: str) -> Report:
+        """Set the small label shown above ``run_label`` in the sidebar."""
+        self.run_label_prefix = _validate_str(text, "run label prefix")
+        return self
 
     def _has_latex(self) -> bool:
         return any(isinstance(item, _Latex) for s in self._sections for item in s.items)
@@ -831,7 +872,8 @@ MathJax = {
         lines.append('  <div class="nav-header">')
         lines.append(self._logo_html())
         if self.run_label:
-            lines.append('    <div class="nav-run-label">pipeline</div>')
+            prefix = html.escape(self.run_label_prefix)
+            lines.append(f'    <div class="nav-run-label">{prefix}</div>')
             lines.append(f'    <div class="nav-title">{html.escape(self.run_label)}</div>')
         if self.run_status:
             lines.append(f'    <div class="nav-meta">{html.escape(self.run_status)}</div>')
@@ -856,37 +898,69 @@ MathJax = {
                 lines.append("      </ul>")
             lines.append("    </li>")
         lines.append("  </ul>")
-        lines.append('  <div class="nav-foot">')
-        lines.append('    <div class="run-status">Pipeline complete</div>')
-        lines.append("  </div>")
+        if self.sidebar_footer:
+            lines.append('  <div class="nav-foot">')
+            lines.append(f'    <div class="run-status">{html.escape(self.sidebar_footer)}</div>')
+            lines.append("  </div>")
         lines.append("</nav>")
         lines.append('<main id="content">')
         return "\n".join(lines)
 
     def _logo_html(self) -> str:
         if self.logo_path and self.logo_path.exists():
+            alt = html.escape(self.logo_alt or "logo")
             if self.logo_path.suffix.lower() == ".svg":
                 svg = self.logo_path.read_text(encoding="utf-8")
-                svg = re.sub(r"<!DOCTYPE[^>]*>", "", svg, flags=re.IGNORECASE)
-                svg = re.sub(r"<[?]xml[^?]*[?]>", "", svg)
-                svg = svg.replace('width="125mm"', 'width="160px"')
-                svg = svg.replace('height="45mm"', 'height="auto"')
-                return svg
+                return self._normalize_svg_logo(svg)
             # Non-SVG logos are referenced as images in the sidebar.
             return (
                 f'<img src="assets/{html.escape(self.logo_path.name)}" '
-                'alt="logo" '
-                'style="width:160px; height:auto; display:block; margin-bottom:1.5rem;">'
+                f'alt="{alt}" '
+                f'style="width:{self.logo_width}; height:{self.logo_height}; '
+                'display:block; margin-bottom:1.5rem;">'
             )
         # Generic inline SVG placeholder when no logo is supplied.
         return (
-            '<svg style="width:160px; height:auto; display:block; margin-bottom:1.5rem;" '
+            f'<svg style="width:{self.logo_width}; height:{self.logo_height}; '
+            'display:block; margin-bottom:1.5rem;" '
             'viewBox="0 0 160 60" xmlns="http://www.w3.org/2000/svg">'
             '<rect x="0" y="0" width="160" height="60" rx="4" fill="#e8edf4"/>'
             '<text x="80" y="34" text-anchor="middle" font-family="Arial, sans-serif" '
             'font-size="14" fill="#264882" font-weight="600">Your Logo</text>'
             "</svg>"
         )
+
+    def _normalize_svg_logo(self, svg: str) -> str:
+        """Make an arbitrary SVG logo scale to the sidebar width.
+
+        Strips fixed width/height attributes from the root ``<svg>`` tag and
+        applies the configured logo size via an inline style so the logo behaves
+        consistently regardless of the source file's dimensions.
+        """
+        svg = re.sub(r"<!DOCTYPE[^>]*>", "", svg, flags=re.IGNORECASE)
+        svg = re.sub(r"<[?]xml[^?]*[?]>", "", svg)
+        match = re.search(r"<svg\b([^>]*)>", svg, flags=re.IGNORECASE)
+        if not match:
+            return svg
+        attrs = match.group(1)
+        # Remove fixed width/height from the root SVG tag only.
+        attrs = re.sub(r"\s+(width|height)\s*=\s*\"[^\"]*\"", "", attrs, flags=re.IGNORECASE)
+        attrs = re.sub(r"\s+(width|height)\s*=\s*'[^']*'", "", attrs, flags=re.IGNORECASE)
+        # Ensure the SVG scales proportionally.
+        if not re.search(r"\bpreserveAspectRatio\s*=", attrs, flags=re.IGNORECASE):
+            attrs += ' preserveAspectRatio="xMidYMid meet"'
+        style = (
+            f"width:{self.logo_width}; height:{self.logo_height}; "
+            "display:block; margin-bottom:1.5rem;"
+        )
+        style_match = re.search(r'\bstyle\s*=\s*"([^"]*)"', attrs, flags=re.IGNORECASE)
+        if style_match:
+            existing = style_match.group(1).rstrip(" ;")
+            merged = f"{existing}; {style}" if existing else style
+            attrs = attrs[: style_match.start()] + f'style="{merged}"' + attrs[style_match.end() :]
+        else:
+            attrs += f' style="{style}"'
+        return svg[: match.start()] + f"<svg{attrs}>" + svg[match.end() :]
 
     def _build_footer_script(self) -> str:
         lines: list[str] = []

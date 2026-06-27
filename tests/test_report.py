@@ -202,6 +202,124 @@ def test_non_svg_logo_copied(out_dir: Path, tmp_path: Path, tmp_report: Report) 
     assert 'src="assets/logo.png"' in sidebar
 
 
+def test_svg_logo_width_height_stripped(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    svg = tmp_path / "logo.svg"
+    svg.write_text(
+        '<?xml version="1.0"?><!DOCTYPE svg>\n'
+        '<svg width="500px" height="200px" xmlns="http://www.w3.org/2000/svg">'
+        "<text>Company</text></svg>",
+        encoding="utf-8",
+    )
+    tmp_report.logo_path = svg
+    tmp_report.save(out_dir)
+    sidebar = (out_dir / "sidebar.html").read_text(encoding="utf-8")
+    # Fixed dimensions should be removed from the root SVG tag.
+    assert 'width="500px"' not in sidebar
+    assert 'height="200px"' not in sidebar
+    # The configured logo size should be applied via style.
+    assert "width:160px" in sidebar
+    assert "height:auto" in sidebar
+    assert "Company" in sidebar
+
+
+def test_svg_logo_merges_with_existing_style(
+    out_dir: Path, tmp_path: Path, tmp_report: Report
+) -> None:
+    svg = tmp_path / "logo.svg"
+    svg.write_text(
+        '<svg style="color:#123456" width="100" height="50" '
+        'xmlns="http://www.w3.org/2000/svg"><text>Co</text></svg>',
+        encoding="utf-8",
+    )
+    tmp_report.logo_path = svg
+    tmp_report.save(out_dir)
+    sidebar = (out_dir / "sidebar.html").read_text(encoding="utf-8")
+    assert "color:#123456" in sidebar
+    assert "width:160px" in sidebar
+    assert 'width="100"' not in sidebar
+
+
+def test_logo_size_and_alt_parameters(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    png = tmp_path / "logo.png"
+    png.write_text("fake png", encoding="utf-8")
+    tmp_report.logo_path = png
+    tmp_report.logo_alt = "Acme Corp"
+    tmp_report.logo_width = "200px"
+    tmp_report.logo_height = "80px"
+    tmp_report.save(out_dir)
+    sidebar = (out_dir / "sidebar.html").read_text(encoding="utf-8")
+    assert 'alt="Acme Corp"' in sidebar
+    assert "width:200px" in sidebar
+    assert "height:80px" in sidebar
+
+
+def test_default_logo_placeholder_uses_configured_size(out_dir: Path, tmp_report: Report) -> None:
+    tmp_report.logo_width = "120px"
+    tmp_report.logo_height = "50px"
+    tmp_report.save(out_dir)
+    sidebar = (out_dir / "sidebar.html").read_text(encoding="utf-8")
+    assert "width:120px" in sidebar
+    assert "height:50px" in sidebar
+    assert "Your Logo" in sidebar
+
+
+def test_set_logo_fluent_api(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    svg = tmp_path / "logo.svg"
+    svg.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg"><text>Fluent</text></svg>',
+        encoding="utf-8",
+    )
+    returned = tmp_report.set_logo(svg, width="180px", height="60px")
+    assert returned is tmp_report
+    tmp_report.save(out_dir)
+    sidebar = (out_dir / "sidebar.html").read_text(encoding="utf-8")
+    assert "Fluent" in sidebar
+    assert "width:180px" in sidebar
+    assert "height:60px" in sidebar
+
+
+def test_set_logo_fluent_api_sets_alt_for_non_svg(
+    out_dir: Path, tmp_path: Path, tmp_report: Report
+) -> None:
+    png = tmp_path / "logo.png"
+    png.write_text("fake png", encoding="utf-8")
+    tmp_report.set_logo(png, alt="Fluent Logo", width="180px")
+    tmp_report.save(out_dir)
+    sidebar = (out_dir / "sidebar.html").read_text(encoding="utf-8")
+    assert 'alt="Fluent Logo"' in sidebar
+    assert "width:180px" in sidebar
+
+
+def test_set_logo_to_none_uses_placeholder(out_dir: Path, tmp_report: Report) -> None:
+    tmp_report.set_logo(None)
+    tmp_report.save(out_dir)
+    sidebar = (out_dir / "sidebar.html").read_text(encoding="utf-8")
+    assert "Your Logo" in sidebar
+
+
+def test_sidebar_footer_configurable(out_dir: Path, tmp_report: Report) -> None:
+    tmp_report.set_sidebar_footer("Ready for review")
+    tmp_report.save(out_dir)
+    sidebar = (out_dir / "sidebar.html").read_text(encoding="utf-8")
+    assert "Ready for review" in sidebar
+    assert "Pipeline complete" not in sidebar
+
+
+def test_empty_sidebar_footer_omits_nav_foot(out_dir: Path, tmp_report: Report) -> None:
+    tmp_report.save(out_dir)
+    sidebar = (out_dir / "sidebar.html").read_text(encoding="utf-8")
+    assert "nav-foot" not in sidebar
+
+
+def test_run_label_prefix_configurable(out_dir: Path, tmp_report: Report) -> None:
+    tmp_report.run_label = "FY2026 Q2"
+    tmp_report.run_label_prefix = "report"
+    tmp_report.save(out_dir)
+    sidebar = (out_dir / "sidebar.html").read_text(encoding="utf-8")
+    assert '<div class="nav-run-label">report</div>' in sidebar
+    assert "pipeline" not in sidebar
+
+
 # --------------------------------------------------------------------------- #
 # Validation
 # --------------------------------------------------------------------------- #
