@@ -11,6 +11,7 @@ dist/
 examples/out/
 tmp_*_test/
 *.html
+!bioinformatics_report/templates/*.html
 *_files/
 
 # Environment

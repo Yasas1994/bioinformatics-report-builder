@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A Quarto-based HTML report template and Python builder for UMG bioinformatics workflows (metagenomics, single-cell RNA-seq, spatial transcriptomics, multi-omics). The Python package writes a Quarto `.qmd` source plus CSS/sidebar/footer includes and an `assets/` folder; the user then runs `quarto render` to produce a standalone HTML report.
+A general-purpose Quarto-based HTML report template and Python builder for bioinformatics workflows (metagenomics, single-cell RNA-seq, spatial transcriptomics, multi-omics). The Python package writes a Quarto `.qmd` source plus CSS/sidebar/footer includes and an `assets/` folder; the user then runs `quarto render` to produce a standalone HTML report. The logo, footer text, and color scheme are fully configurable.
 
 ## Architecture & Data Flow
 
@@ -94,7 +94,8 @@ python -m build
 | `bioinformatics_report/templates/_extension.yml` | Quarto extension manifest; not read by the Python builder. |
 | `bioinformatics_report/templates/bioinformatics-report.css` | Stylesheet referenced by the Quarto extension only. |
 | `pyproject.toml` | PEP 621 project metadata and setuptools build configuration. |
-| `Unimed_logo.svg` | Logo embedded inline in generated sidebars. |
+| `examples/assets/Unimed_logo.svg` | Example logo used by the bundled workflow reports. |
+| `bioinformatics_report/templates/sidebar.html` | Default sidebar for manual `.qmd` use; contains a generic logo placeholder. |
 
 ## Runtime/Tooling Preferences
 

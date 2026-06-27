@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import html
+import re
 import shutil
 import warnings
 from datetime import date as _Date
@@ -877,20 +878,23 @@ MathJax = {
                 svg = self.logo_path.read_text(encoding="utf-8")
                 svg = re.sub(r"<!DOCTYPE[^>]*>", "", svg, flags=re.IGNORECASE)
                 svg = re.sub(r"<[?]xml[^?]*[?]>", "", svg)
-                svg = svg.replace("width=\"125mm\"", 'width=\"160px\"')
-                svg = svg.replace("height=\"45mm\"", 'height=\"auto\"')
+                svg = svg.replace('width="125mm"', 'width="160px"')
+                svg = svg.replace('height="45mm"', 'height="auto"')
                 return svg
             # Non-SVG logos are referenced as images in the sidebar.
             return (
                 f'<img src="assets/{html.escape(self.logo_path.name)}" '
                 f'alt="logo" style="width:160px; height:auto; display:block; margin-bottom:1.5rem;">'
             )
-        # Default inline SVG placeholder.
-        here = Path(__file__).with_suffix("").parent / "templates"
-        footer = here / "footer.html"
-        if footer.exists():
-            return footer.read_text(encoding="utf-8")
-        return ""
+        # Generic inline SVG placeholder when no logo is supplied.
+        return (
+            '<svg style="width:160px; height:auto; display:block; margin-bottom:1.5rem;" '
+            'viewBox="0 0 160 60" xmlns="http://www.w3.org/2000/svg">'
+            '<rect x="0" y="0" width="160" height="60" rx="4" fill="#e8edf4"/>'
+            '<text x="80" y="34" text-anchor="middle" font-family="Arial, sans-serif" '
+            'font-size="14" fill="#264882" font-weight="600">Your Logo</text>'
+            '</svg>'
+        )
 
     def _build_footer_script(self) -> str:
         lines: list[str] = []
