@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import dataclasses as dc
+import datetime
 import html
 import re
 import shutil
 import warnings
-from datetime import date as _Date
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, Iterable, Protocol, Sequence, runtime_checkable
-
+from typing import Any, Protocol, runtime_checkable
 
 # --------------------------------------------------------------------------- #
 # Validation helpers
@@ -41,10 +41,10 @@ def _validate_path(value: str | Path | None, name: str, *, must_exist: bool) -> 
 
 
 def _validate_choice(value: Any, choices: set[str], name: str) -> str:
-    value = _validate_str(value, name)
-    if value not in choices:
-        raise ValueError(f"{name} must be one of {sorted(choices)}, got {value!r}")
-    return value
+    text = _validate_str(value, name)
+    if text not in choices:
+        raise ValueError(f"{name} must be one of {sorted(choices)}, got {text!r}")
+    return text
 
 
 def _cell_text(value: Any) -> str:
@@ -67,7 +67,7 @@ def _contains_math_delimiter(text: str) -> bool:
 class _Renderable(Protocol):
     """Protocol for section items that know how to render themselves."""
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str: ...
+    def render(self, section: Section, asset_rel_prefix: str) -> str: ...
 
 
 @dc.dataclass
@@ -75,11 +75,8 @@ class _SubSection:
     title: str
     anchor: str
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
-        return (
-            f'  <div class="sub-head" id="{self.anchor}">'
-            f'{html.escape(self.title)}</div>'
-        )
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
+        return f'  <div class="sub-head" id="{self.anchor}">{html.escape(self.title)}</div>'
 
 
 @dc.dataclass
@@ -94,7 +91,7 @@ class _Metric:
 class _MetricsGroup:
     items: list[_Metric]
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         style = f' style="grid-template-columns: repeat({len(self.items)}, 1fr)"'
         out = [f'  <div class="metric-strip"{style}>']
         for m in self.items:
@@ -113,10 +110,10 @@ class _MetricsGroup:
 class _Paragraph:
     text: str
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         return (
             f'  <p style="font-size:0.8rem; color:var(--steel); margin-bottom:1rem">'
-            f'{html.escape(self.text)}</p>'
+            f"{html.escape(self.text)}</p>"
         )
 
 
@@ -126,12 +123,12 @@ class _Notice:
     text: str
     kind: str = "info"
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
-        cls = f'notice {self.kind}' if self.kind != "info" else "notice"
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
+        cls = f"notice {self.kind}" if self.kind != "info" else "notice"
         return (
             f'  <div class="{cls}">'
             f'<span class="notice-tag">{html.escape(self.tag)}</span>'
-            f'{html.escape(self.text)}</div>'
+            f"{html.escape(self.text)}</div>"
         )
 
 
@@ -143,10 +140,10 @@ class _Table:
     col_classes: list[str | None] | None = None
     cell_classes: list[list[str | None]] | None = None
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         out = ['  <table class="data-table">', "    <thead>", "      <tr>"]
         for h in self.headers:
-            out.append(f'        <th>{html.escape(h)}</th>')
+            out.append(f"        <th>{html.escape(h)}</th>")
         out.append("      </tr>")
         out.append("    </thead>")
         out.append("    <tbody>")
@@ -166,7 +163,7 @@ class _Table:
                     c = None
                 if c:
                     cls = f' class="{html.escape(c)}"'
-                out.append(f'        <td{cls}>{html.escape(cell)}</td>')
+                out.append(f"        <td{cls}>{html.escape(cell)}</td>")
             out.append("      </tr>")
         out.append("    </tbody>")
         out.append("  </table>")
@@ -183,7 +180,7 @@ class _FreqBars:
     data: list[tuple[str, float]]
     low_threshold: float
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         out = ['  <table class="freq-table">']
         for label, pct in self.data:
             low = " low" if pct < self.low_threshold else ""
@@ -206,16 +203,16 @@ class _Figure:
     caption: str
     label: str
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         src = f"{asset_rel_prefix}{self.src.name}"
         return (
             f'  <div class="figure-area">'
             f'<div class="figure-canvas">'
             f'<img src="{src}" alt="{html.escape(self.caption)}" '
             f'style="max-width:100%; max-height:100%; object-fit:contain;">'
-            f'</div>'
+            f"</div>"
             f'<div class="figure-label"><b>{html.escape(self.label)}</b> · '
-            f'{html.escape(self.caption)}</div></div>'
+            f"{html.escape(self.caption)}</div></div>"
         )
 
 
@@ -224,7 +221,7 @@ class _Code:
     language: str
     code: str
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         body = html.escape(self.code)
         return f'  <div class="code-block">{body}</div>'
 
@@ -234,7 +231,7 @@ class _Latex:
     text: str
     display: bool = False
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         # Deliberately NOT html.escape()-ed: MathJax must see the raw TeX.
         if self.display:
             return f'  <div class="math display">\\[{self.text}\\]</div>'
@@ -245,10 +242,10 @@ class _Latex:
 class _References:
     citations: list[str]
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         out = ['  <ol class="ref-list">']
         for c in self.citations:
-            out.append(f'    <li>{html.escape(c)}</li>')
+            out.append(f"    <li>{html.escape(c)}</li>")
         out.append("  </ol>")
         return "\n".join(out)
 
@@ -257,7 +254,7 @@ class _References:
 class _RawHtml:
     html: str
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         return self.html
 
 
@@ -266,7 +263,7 @@ class _List:
     items: list[str]
     ordered: bool
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         tag = "ol" if self.ordered else "ul"
         out = [f'  <{tag} class="report-list">']
         for item in self.items:
@@ -279,9 +276,9 @@ class _List:
 class _Markdown:
     text: str
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         try:
-            import markdown
+            import markdown  # type: ignore[import-untyped]
         except ImportError as exc:  # pragma: no cover
             raise ImportError(
                 "add_markdown requires the 'markdown' package. "
@@ -297,12 +294,12 @@ class _Download:
     path: Path
     label: str
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         filename = self.path.name
         return (
             f'  <p class="download-link">'
             f'<a href="{asset_rel_prefix}{html.escape(filename)}" download>'
-            f'{html.escape(self.label)}</a></p>'
+            f"{html.escape(self.label)}</a></p>"
         )
 
 
@@ -311,11 +308,11 @@ class _CitationLink:
     text: str
     url: str
 
-    def render(self, section: "Section", asset_rel_prefix: str) -> str:
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
         return (
             f'  <p class="citation-link">'
             f'<a href="{html.escape(self.url)}" target="_blank" rel="noopener">'
-            f'{html.escape(self.text)}</a></p>'
+            f"{html.escape(self.text)}</a></p>"
         )
 
 
@@ -337,14 +334,14 @@ class Section:
         self._figure_counter = 0
 
     # ------------------------------------------------------------------ public
-    def set_overview(self, text: str) -> "Section":
+    def set_overview(self, text: str) -> Section:
         """Set the overview paragraph for this section."""
         self.overview = _validate_str(text, "overview")
         return self
 
     add_overview = set_overview
 
-    def add_metrics(self, metrics: Iterable[dict[str, Any]]) -> "Section":
+    def add_metrics(self, metrics: Iterable[dict[str, Any]]) -> Section:
         """Add a strip of metric cards.
 
         Each metric dict accepts keys: label, value, sub, highlight.
@@ -362,7 +359,7 @@ class Section:
         self.items.append(_MetricsGroup(items=parsed))
         return self
 
-    def add_subsection(self, title: str, anchor: str | None = None) -> "Section":
+    def add_subsection(self, title: str, anchor: str | None = None) -> Section:
         """Add a subsection heading with an anchor for the sidebar."""
         title = _validate_str(title, "subsection title")
         if anchor is None:
@@ -373,12 +370,12 @@ class Section:
         self.items.append(_SubSection(title=title, anchor=anchor))
         return self
 
-    def add_text(self, text: str) -> "Section":
+    def add_text(self, text: str) -> Section:
         """Add a plain paragraph."""
         self.items.append(_Paragraph(_validate_str(text, "text")))
         return self
 
-    def add_notice(self, tag: str, text: str, kind: str = "info") -> "Section":
+    def add_notice(self, tag: str, text: str, kind: str = "info") -> Section:
         """Add an info/warn notice strip."""
         kind = _validate_choice(kind, {"info", "warn"}, "notice kind")
         self.items.append(
@@ -397,7 +394,7 @@ class Section:
         caption: str = "",
         col_classes: Sequence[str | None] | None = None,
         cell_classes: Sequence[Sequence[str | None]] | None = None,
-    ) -> "Section":
+    ) -> Section:
         """Add a data table.
 
         ``col_classes`` applies a CSS class to every cell in a column.
@@ -427,13 +424,11 @@ class Section:
 
     def add_freq_bars(
         self, data: Iterable[tuple[str, float]], low_threshold: float = 15.0
-    ) -> "Section":
+    ) -> Section:
         """Add a minimal horizontal bar chart from (label, percent) tuples."""
         parsed: list[tuple[str, float]] = []
         for label, pct in data:
-            parsed.append(
-                (_validate_str(label, "freq label"), float(pct))
-            )
+            parsed.append((_validate_str(label, "freq label"), float(pct)))
         self.items.append(_FreqBars(data=parsed, low_threshold=float(low_threshold)))
         return self
 
@@ -442,10 +437,10 @@ class Section:
         path: str | Path,
         caption: str,
         label: str | None = None,
-    ) -> "Section":
+    ) -> Section:
         """Reference a figure.  It will be copied to the report assets dir."""
-        path = _validate_path(path, "figure path", must_exist=False)
-        if path is None:
+        valid_path = _validate_path(path, "figure path", must_exist=False)
+        if valid_path is None:
             raise ValueError("figure path cannot be empty")
         if label is None:
             self._figure_counter += 1
@@ -454,14 +449,14 @@ class Section:
             label = _validate_str(label, "figure label")
         self.items.append(
             _Figure(
-                src=path,
+                src=valid_path,
                 caption=_validate_str(caption, "figure caption"),
                 label=label,
             )
         )
         return self
 
-    def add_code(self, language: str, code: str) -> "Section":
+    def add_code(self, language: str, code: str) -> Section:
         """Add a styled code block."""
         self.items.append(
             _Code(
@@ -471,19 +466,17 @@ class Section:
         )
         return self
 
-    def add_references(self, citations: Iterable[str]) -> "Section":
+    def add_references(self, citations: Iterable[str]) -> Section:
         """Add a numbered reference list."""
-        self.items.append(
-            _References([_validate_str(c, "citation") for c in citations])
-        )
+        self.items.append(_References([_validate_str(c, "citation") for c in citations]))
         return self
 
-    def add_raw(self, html_fragment: str) -> "Section":
+    def add_raw(self, html_fragment: str) -> Section:
         """Insert arbitrary raw HTML."""
         self.items.append(_RawHtml(_validate_str(html_fragment, "html fragment")))
         return self
 
-    def add_latex(self, text: str, display: bool = False) -> "Section":
+    def add_latex(self, text: str, display: bool = False) -> Section:
         """Add a LaTeX math expression.
 
         Inline math is wrapped in \\( ... \\); display math in \\[ ... \\].
@@ -499,7 +492,7 @@ class Section:
         self.items.append(_Latex(text=text, display=bool(display)))
         return self
 
-    def add_list(self, items: Iterable[str], ordered: bool = False) -> "Section":
+    def add_list(self, items: Iterable[str], ordered: bool = False) -> Section:
         """Add a bulleted or numbered list."""
         self.items.append(
             _List(
@@ -509,7 +502,7 @@ class Section:
         )
         return self
 
-    def add_markdown(self, text: str) -> "Section":
+    def add_markdown(self, text: str) -> Section:
         """Add Markdown content rendered to HTML.
 
         Requires the optional ``markdown`` package.
@@ -521,16 +514,16 @@ class Section:
         self,
         path: str | Path,
         label: str | None = None,
-    ) -> "Section":
+    ) -> Section:
         """Add a download link to a file that will be copied to assets."""
-        path = _validate_path(path, "download path", must_exist=False)
-        if path is None:
+        valid_path = _validate_path(path, "download path", must_exist=False)
+        if valid_path is None:
             raise ValueError("download path cannot be empty")
-        label = _validate_str(label or path.name, "download label")
-        self.items.append(_Download(path=path, label=label))
+        label = _validate_str(label or valid_path.name, "download label")
+        self.items.append(_Download(path=valid_path, label=label))
         return self
 
-    def add_citation_link(self, text: str, url: str) -> "Section":
+    def add_citation_link(self, text: str, url: str) -> Section:
         """Add a citation paragraph linking to an external URL."""
         self.items.append(
             _CitationLink(
@@ -547,7 +540,7 @@ class Section:
         lines.append(f'<section class="report-section" id="{anchor}">')
         lines.append('  <div class="section-head">')
         lines.append(f'    <span class="section-num">{html.escape(self.number)}</span>')
-        lines.append(f'    <h2>{html.escape(self.title)}</h2>')
+        lines.append(f"    <h2>{html.escape(self.title)}</h2>")
         if self.count:
             lines.append(f'    <span class="section-count">{html.escape(self.count)}</span>')
         lines.append("  </div>")
@@ -556,7 +549,7 @@ class Section:
             lines.append(
                 f'  <p style="font-size:0.82rem; color:var(--steel); '
                 f'max-width:600px; margin-bottom:1.5rem; line-height:1.7">'
-                f'{html.escape(self.overview)}</p>'
+                f"{html.escape(self.overview)}</p>"
             )
 
         for item in self.items:
@@ -605,7 +598,7 @@ class Report:
         self.operator = _validate_str(operator, "operator")
         self.reference = _validate_str(reference, "reference")
         self.cluster = _validate_str(cluster, "cluster")
-        self.date = _validate_optional_str(date, "date") or str(_Date.today())
+        self.date = _validate_optional_str(date, "date") or str(datetime.date.today())
         self.run_label = _validate_str(run_label, "run_label")
         self.run_status = _validate_str(run_status, "run_status")
         self.logo_path = _validate_path(logo_path, "logo_path", must_exist=False)
@@ -618,7 +611,7 @@ class Report:
         self._sections: list[Section] = []
 
     # ------------------------------------------------------------------ public
-    def set_metadata(self, items: Sequence[tuple[str, str]]) -> "Report":
+    def set_metadata(self, items: Sequence[tuple[str, str]]) -> Report:
         """Set the masthead metadata ledger.
 
         Expects a sequence of (key, value) pairs; up to five fit the layout.
@@ -681,7 +674,7 @@ class Report:
                 if isinstance(item, _Figure):
                     src = item.src.resolve()
                     if not src.exists():
-                        warnings.warn(f"Figure not found, skipping: {src}")
+                        warnings.warn(f"Figure not found, skipping: {src}", stacklevel=2)
                         continue
                     if src.parent == assets:
                         continue
@@ -689,7 +682,10 @@ class Report:
                 elif isinstance(item, _Download):
                     src = item.path.resolve()
                     if not src.exists():
-                        warnings.warn(f"Download file not found, skipping: {src}")
+                        warnings.warn(
+                            f"Download file not found, skipping: {src}",
+                            stacklevel=2,
+                        )
                         continue
                     if src.parent == assets:
                         continue
@@ -716,18 +712,14 @@ MathJax = {
     def _write_extra_css(self, out: Path) -> None:
         if self.extra_css is None:
             return
-        source = Path(self.extra_css)
-        if not source.exists():
-            # Treat as raw CSS text.
-            (out / "custom.css").write_text(
-                f"<style>\n{source.read_text(encoding='utf-8')}\n</style>",
-                encoding="utf-8",
-            )
+        if self.extra_css.exists():
+            content = self.extra_css.read_text(encoding="utf-8")
         else:
-            content = source.read_text(encoding="utf-8")
-            if not content.strip().startswith("<style>"):
-                content = f"<style>\n{content}\n</style>"
-            (out / "custom.css").write_text(content, encoding="utf-8")
+            # Treat the value as raw CSS text.
+            content = str(self.extra_css)
+        if not content.strip().startswith("<style>"):
+            content = f"<style>\n{content}\n</style>"
+        (out / "custom.css").write_text(content, encoding="utf-8")
 
     def _resolve_mathjax_url(self, out: Path) -> str:
         if self.mathjax_url:
@@ -738,10 +730,10 @@ MathJax = {
                 target = out / "assets" / "mathjax" / "tex-chtml.js"
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(local, target)
-                return f"assets/mathjax/tex-chtml.js"
+                return "assets/mathjax/tex-chtml.js"
             warnings.warn(
-                "offline_mathjax=True but no local MathJax installation found; "
-                "falling back to CDN"
+                "offline_mathjax=True but no local MathJax installation found; falling back to CDN",
+                stacklevel=2,
             )
         return "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"
 
@@ -809,18 +801,18 @@ MathJax = {
         lines.append('<div class="masthead">')
         lines.append('  <div class="masthead-top">')
         lines.append(
-            f'    <h1>{html.escape(self.title_line1)}<br><strong>'
-            f'{html.escape(self.title_line2)}</strong></h1>'
+            f"    <h1>{html.escape(self.title_line1)}<br><strong>"
+            f"{html.escape(self.title_line2)}</strong></h1>"
         )
         lines.append('    <div class="masthead-pipeline">')
         if self.pipeline:
-            lines.append(f'      <span>pipeline</span>{html.escape(self.pipeline)}')
+            lines.append(f"      <span>pipeline</span>{html.escape(self.pipeline)}")
         if self.operator:
-            lines.append(f'      <span>operator</span>{html.escape(self.operator)}')
+            lines.append(f"      <span>operator</span>{html.escape(self.operator)}")
         if self.reference:
-            lines.append(f'      <span>reference</span>{html.escape(self.reference)}')
+            lines.append(f"      <span>reference</span>{html.escape(self.reference)}")
         if self.cluster:
-            lines.append(f'      <span>cluster</span>{html.escape(self.cluster)}')
+            lines.append(f"      <span>cluster</span>{html.escape(self.cluster)}")
         lines.append("    </div>")
         lines.append("  </div>")
         lines.append('  <div class="meta-ledger">')
@@ -839,7 +831,7 @@ MathJax = {
         lines.append('  <div class="nav-header">')
         lines.append(self._logo_html())
         if self.run_label:
-            lines.append(f'    <div class="nav-run-label">pipeline</div>')
+            lines.append('    <div class="nav-run-label">pipeline</div>')
             lines.append(f'    <div class="nav-title">{html.escape(self.run_label)}</div>')
         if self.run_status:
             lines.append(f'    <div class="nav-meta">{html.escape(self.run_status)}</div>')
@@ -859,8 +851,7 @@ MathJax = {
                 lines.append('      <ul class="nav-sub">')
                 for sub in subsections:
                     lines.append(
-                        f'        <li><a href="#{sub.anchor}">'
-                        f'{html.escape(sub.title)}</a></li>'
+                        f'        <li><a href="#{sub.anchor}">{html.escape(sub.title)}</a></li>'
                     )
                 lines.append("      </ul>")
             lines.append("    </li>")
@@ -884,7 +875,8 @@ MathJax = {
             # Non-SVG logos are referenced as images in the sidebar.
             return (
                 f'<img src="assets/{html.escape(self.logo_path.name)}" '
-                f'alt="logo" style="width:160px; height:auto; display:block; margin-bottom:1.5rem;">'
+                'alt="logo" '
+                'style="width:160px; height:auto; display:block; margin-bottom:1.5rem;">'
             )
         # Generic inline SVG placeholder when no logo is supplied.
         return (
@@ -893,15 +885,15 @@ MathJax = {
             '<rect x="0" y="0" width="160" height="60" rx="4" fill="#e8edf4"/>'
             '<text x="80" y="34" text-anchor="middle" font-family="Arial, sans-serif" '
             'font-size="14" fill="#264882" font-weight="600">Your Logo</text>'
-            '</svg>'
+            "</svg>"
         )
 
     def _build_footer_script(self) -> str:
         lines: list[str] = []
         lines.append("</main>")
         lines.append('<footer class="report-footer">')
-        lines.append(f'  <span>{html.escape(self.footer_left)}</span>')
-        lines.append(f'  <span>{html.escape(self.footer_right)}</span>')
+        lines.append(f"  <span>{html.escape(self.footer_left)}</span>")
+        lines.append(f"  <span>{html.escape(self.footer_right)}</span>")
         lines.append("</footer>")
         lines.append("<script>")
         lines.append("document.querySelectorAll('.nav-section-link').forEach(link => {")
@@ -909,19 +901,26 @@ MathJax = {
         lines.append("    e.preventDefault();")
         lines.append("    const li = link.closest('li');")
         lines.append("    li.classList.toggle('open');")
-        lines.append("    document.querySelector(link.getAttribute('href')).scrollIntoView({behavior:'smooth'});")
+        lines.append("    const href = link.getAttribute('href');")
+        lines.append("    document.querySelector(href).scrollIntoView({behavior:'smooth'});")
         lines.append("  });")
         lines.append("});")
         lines.append("const observer = new IntersectionObserver(entries => {")
         lines.append("  entries.forEach(entry => {")
         lines.append("    if (entry.isIntersecting) {")
-        lines.append("      document.querySelectorAll('.nav-section-link').forEach(l => l.classList.remove('active'));")
+        lines.append("      document.querySelectorAll('.nav-section-link')")
+        lines.append("        .forEach(l => l.classList.remove('active'));")
         lines.append("      const id = entry.target.id;")
-        lines.append("      const active = document.querySelector('.nav-section-link[href=\"#' + id + '\"]');")
-        lines.append("      if (active) { active.classList.add('active'); active.closest('li').classList.add('open'); }")
+        lines.append("      const selector = '.nav-section-link[href=\"#' + id + '\"]';")
+        lines.append("      const active = document.querySelector(selector);")
+        lines.append("      if (active) {")
+        lines.append("        active.classList.add('active');")
+        lines.append("        active.closest('li').classList.add('open');")
+        lines.append("      }")
         lines.append("    }")
         lines.append("  });")
         lines.append("}, {threshold: 0.5});")
-        lines.append("document.querySelectorAll('.report-section').forEach(s => observer.observe(s));")
+        lines.append("document.querySelectorAll('.report-section')")
+        lines.append("  .forEach(s => observer.observe(s));")
         lines.append("</script>")
         return "\n".join(lines)

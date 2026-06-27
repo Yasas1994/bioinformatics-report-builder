@@ -1,7 +1,7 @@
-"""Programmatic builder for UMG bioinformatics HTML reports.
+"""Programmatic builder for branded HTML reports.
 
 The package exposes a small fluent API that writes a Quarto `.qmd` document
-plus the required CSS / sidebar / footer includes.  Rendering is then done
+plus the required CSS / sidebar / footer includes. Rendering is then done
 with Quarto::
 
     from bioinformatics_report import Report
@@ -12,7 +12,13 @@ with Quarto::
     # quarto render my_report/report.qmd --to html
 """
 
+from importlib.metadata import PackageNotFoundError, version
+
 from .report import Report, Section
 
 __all__ = ["Report", "Section"]
-__version__ = "0.1.0"
+
+try:
+    __version__ = version(__package__)
+except PackageNotFoundError:  # pragma: no cover
+    __version__ = "0.0.0"
