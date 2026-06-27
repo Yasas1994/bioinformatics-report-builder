@@ -10,31 +10,6 @@ boxes, code blocks and references) and produces a standalone HTML file. Figures
 are kept as linked files in an `assets/` directory. The company or institution
 logo is fully configurable.
 
-## Repository layout
-
-```
-.
-├── bioinformatics_report/       # Python package
-│   ├── __init__.py
-│   ├── report.py                # Report and Section builder classes
-│   └── templates/               # Quarto extension files
-│       ├── _extension.yml
-│       ├── bioinformatics-report.css
-│       ├── styles.html          # embedded CSS include
-│       ├── sidebar.html         # default sidebar with generic logo placeholder
-│       ├── footer.html          # closing </main> + navigation script
-│       └── template.qmd         # manual Quarto template
-├── examples/                    # workflow examples
-│   ├── assets/                  # example logos and other static assets
-│   │   └── Unimed_logo.svg
-│   ├── metagenomics_report.py
-│   ├── single_cell_report.py
-│   ├── spatial_transcriptomics_report.py
-│   ├── multi_omics_report.py
-│   └── generic_company_report.py
-└── pyproject.toml
-```
-
 ## Installation
 
 ### Prerequisites
@@ -376,4 +351,4 @@ mypy bioinformatics_report
 
 ## License
 
-MIT – Kaderali Lab, Universitätsmedizin Greifswald.
+MIT
