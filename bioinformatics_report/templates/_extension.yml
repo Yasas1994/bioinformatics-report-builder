@@ -1,0 +1,25 @@
+title: Bioinformatics Report
+author: Universitätsmedizin Greifswald – Kaderali Lab
+version: 0.1.0
+quarto-required: ">=1.4.0"
+contributes:
+  formats:
+    html:
+      toc: false
+      theme: none
+      page-layout: custom
+      css: bioinformatics-report.css
+      embed-resources: false
+      smooth-scroll: true
+      fig-responsive: true
+      link-color: '#264882'
+      callout-appearance: simple
+      mainfont: "Arial, Helvetica, sans-serif"
+      monofont: "'Roboto Mono', 'Courier New', monospace"
+      title-prefix: ""
+      format-resources:
+        - bioinformatics-report.css
+        - styles.html
+        - sidebar.html
+        - footer.html
+        - template.qmd

@@ -1,0 +1,36 @@
+[project]
+name = "umg-bioinformatics-report"
+version = "0.1.0"
+description = "Quarto template and Python builder for UMG bioinformatics HTML reports"
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "Kaderali Lab", email = "bioinfo@uni-greifswald.de" }
+]
+keywords = ["bioinformatics", "quarto", "report", "html", "template"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+]
+
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["matplotlib", "numpy"]
+
+[project.urls]
+Homepage = "https://github.com/UMG/umg-bioinformatics-report"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bioinformatics_report*"]
+exclude = ["tmp_*", "examples", "tests"]
+
+[tool.setuptools.package-data]
+bioinformatics_report = ["templates/*"]

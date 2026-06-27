@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+*.whl
+build/
+dist/
+
+# Generated report outputs
+examples/out/
+tmp_*_test/
+*.html
+*_files/
+
+# Environment
+.env
+.venv/
+venv/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+.ruff_cache/
