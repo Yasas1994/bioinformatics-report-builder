@@ -15,7 +15,7 @@ The template provides a clean, branded report layout (sticky sidebar navigation,
 │       ├── _extension.yml
 │       ├── bioinformatics-report.css
 │       ├── styles.html          # embedded CSS include
-│       ├── sidebar.html         # default sidebar with embedded Unimed logo
+│       ├── sidebar.html         # default sidebar with generic logo placeholder
 │       ├── footer.html          # closing </main> + navigation script
 │       └── template.qmd         # manual Quarto template
 ├── examples/                    # workflow examples
@@ -111,70 +111,6 @@ The output `my_report/report.html` links to figures copied into `my_report/asset
 - `add_references([citation, ...])`
 - `add_raw(html_fragment)`
 
-## Customizing the logo
-
-Pass any SVG, PNG or JPG to `Report(logo_path=...)`:
-
-```python
-from pathlib import Path
-from bioinformatics_report import Report
-
-report = Report(
-    title_line1="My Study",
-    title_line2="Analysis Report",
-    logo_path=Path("path/to/my-logo.svg"),
-)
-```
-
-- **SVG** logos are embedded inline in the sidebar (best quality and small file size).
-- **PNG/JPG** logos are copied into the report `assets/` folder and referenced with an `<img>` tag.
-- If `logo_path` is omitted, a generic placeholder box is shown in the sidebar.
-
-When using the manual `.qmd` workflow, replace the placeholder `<svg>` in `sidebar.html` with your own logo markup.
-
-## Workflow examples
-
-Generate all example reports:
-
-```bash
-cd examples
-python metagenomics_report.py
-python single_cell_report.py
-python spatial_transcriptomics_report.py
-python multi_omics_report.py
-```
-
-Then render each one:
-
-```bash
-for f in out/*/*.qmd; do quarto render "$f" --to html; done
-```
-
-## Manual use with a `.qmd` template
-
-You can also write a `.qmd` directly. Copy the template files from `bioinformatics_report/templates/` (`styles.html`, `sidebar.html`, `footer.html`) into your project and use the frontmatter shown in `bioinformatics_report/templates/template.qmd`:
-
-```yaml
----
-title: "My Analysis"
-format:
-  html:
-    toc: false
-    theme: none
-    page-layout: custom
-    include-in-header: styles.html
-    include-before-body: sidebar.html
-    include-after-body: footer.html
-    embed-resources: false
-    link-color: '#264882'
----
-```
-
-The body of `template.qmd` shows the CSS classes and raw-HTML layout used by the builder.
-
-## License
-
-MIT – Kaderali Lab, Universitätsmedizin Greifswald.
 ## Customizing the logo
 
 Pass any SVG, PNG or JPG to `Report(logo_path=...)`:
