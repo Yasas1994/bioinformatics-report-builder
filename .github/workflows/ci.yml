@@ -24,7 +24,7 @@ jobs:
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
         with:
-          version: "1.4.0"
+          version: "1.6.43"
 
       - name: Install package
         run: |
@@ -49,6 +49,7 @@ jobs:
           python single_cell_report.py
           python spatial_transcriptomics_report.py
           python multi_omics_report.py
+          python generic_company_report.py
           for f in out/*/*.qmd; do quarto render "$f" --to html; done
 
       - name: Upload coverage
