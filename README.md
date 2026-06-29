@@ -197,7 +197,7 @@ chaining.
 | `add_notice(tag, text, kind="info" \| "warn")` | Add an info/warn notice strip. |
 | `add_table(headers, rows, df, caption="", col_classes=..., cell_classes=..., paginate=False, page_size=25)` | Add a data table. Provide `headers`+`rows` **or** a pandas `df`. `cell_classes` should have the same shape as `rows`. Set `paginate=True` for client-side pagination. |
 | `add_freq_bars(data, low_threshold=15.0)` | Add a minimal horizontal bar chart from `(label, percent)` tuples. |
-| `add_figure(path, caption, label=None, width=None)` | Reference a figure; the file is copied to `assets/`. Native size by default, scaled down if wider than the column. Pass `width` (e.g. `"600px"`, `"80%"`) to set a display width. |
+| `add_figure(path, caption, label=None, width=None, height=None)` | Reference a figure; the file is copied to `assets/`. Native size by default. Pass `width` and/or `height` to set display dimensions; both together use `object-fit: contain`. |
 | `add_code(language, code)` | Add a styled code block. |
 | `add_latex(tex, display=False)` | Add inline or display LaTeX. MathJax is loaded automatically. |
 | `add_references(citations)` | Add a numbered reference list. |
@@ -328,12 +328,16 @@ are wider than the content column:
 section.add_figure("umap.png", caption="UMAP embedding")
 ```
 
-Pass `width` to force a specific display size:
+Pass `width` and/or `height` to force specific display dimensions:
 
 ```python
 section.add_figure("umap.png", caption="UMAP embedding", width="70%")
 section.add_figure("umap.png", caption="UMAP embedding", width="600px")
+section.add_figure("umap.png", caption="UMAP embedding", width="600px", height="400px")
 ```
+
+When both `width` and `height` are given, `object-fit: contain` keeps the
+aspect ratio.
 
 ## Workflow examples
 

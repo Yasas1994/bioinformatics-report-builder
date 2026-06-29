@@ -199,6 +199,39 @@ def test_add_figure_warns_when_missing(out_dir: Path, tmp_report: Report) -> Non
         tmp_report.save(out_dir)
 
 
+def test_add_figure_width(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    img = tmp_path / "plot.png"
+    img.write_text("fake png", encoding="utf-8")
+    section = tmp_report.add_section("02", "Figure")
+    section.add_figure(img, caption="A plot", width="80%")
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert 'style="width:80%; height:auto; display:block;"' in text
+
+
+def test_add_figure_height(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    img = tmp_path / "plot.png"
+    img.write_text("fake png", encoding="utf-8")
+    section = tmp_report.add_section("02", "Figure")
+    section.add_figure(img, caption="A plot", height="400px")
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert 'style="height:400px; width:auto; display:block;"' in text
+
+
+def test_add_figure_width_and_height(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    img = tmp_path / "plot.png"
+    img.write_text("fake png", encoding="utf-8")
+    section = tmp_report.add_section("02", "Figure")
+    section.add_figure(img, caption="A plot", width="600px", height="400px")
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert 'style="width:600px; height:400px; object-fit:contain; display:block;"' in text
+
+
 def test_add_download_copies_to_assets(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
     data = tmp_path / "data.tsv"
     data.write_text("a\tb\n", encoding="utf-8")

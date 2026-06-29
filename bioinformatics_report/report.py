@@ -219,11 +219,18 @@ class _Figure:
     caption: str
     label: str
     width: str | None = None
+    height: str | None = None
 
     def render(self, section: Section, asset_rel_prefix: str) -> str:
         src = f"{asset_rel_prefix}{self.src.name}"
-        if self.width:
-            style = f"width:{html.escape(self.width)}; height:auto; display:block;"
+        width = html.escape(self.width) if self.width else None
+        height = html.escape(self.height) if self.height else None
+        if width and height:
+            style = f"width:{width}; height:{height}; object-fit:contain; display:block;"
+        elif width:
+            style = f"width:{width}; height:auto; display:block;"
+        elif height:
+            style = f"height:{height}; width:auto; display:block;"
         else:
             style = "max-width:100%; height:auto; display:block;"
         return (
@@ -488,12 +495,15 @@ class Section:
         caption: str,
         label: str | None = None,
         width: str | None = None,
+        height: str | None = None,
     ) -> Section:
         """Reference a figure.  It will be copied to the report assets dir.
 
         By default the image is shown at its native size, scaled down only if
         it is wider than the content column. Pass ``width`` (e.g. ``"600px"``
-        or ``"80%"``) to force a specific display width.
+        or ``"80%"``) and/or ``height`` (e.g. ``"400px"``) to force specific
+        display dimensions. When both are given, ``object-fit: contain`` keeps
+        the aspect ratio.
         """
         valid_path = _validate_path(path, "figure path", must_exist=False)
         if valid_path is None:
@@ -505,12 +515,15 @@ class Section:
             label = _validate_str(label, "figure label")
         if width is not None:
             width = _validate_str(width, "figure width")
+        if height is not None:
+            height = _validate_str(height, "figure height")
         self.items.append(
             _Figure(
                 src=valid_path,
                 caption=_validate_str(caption, "figure caption"),
                 label=label,
                 width=width,
+                height=height,
             )
         )
         return self
