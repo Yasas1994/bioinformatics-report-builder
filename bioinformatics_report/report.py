@@ -32,7 +32,7 @@ def _validate_optional_str(value: Any, name: str) -> str | None:
 def _validate_path(value: str | Path | None, name: str, *, must_exist: bool) -> Path | None:
     if value is None:
         return None
-    if not isinstance(value, (str, Path)):
+    if not isinstance(value, str | Path):
         raise TypeError(f"{name} must be a string or Path, got {type(value).__name__}")
     path = Path(value)
     if must_exist and not path.exists():
