@@ -115,7 +115,7 @@ cls.add_freq_bars(
         ("Unclassified", 12.7),
     ]
 )
-cls.add_figure(fig_path, caption="Relative abundance of classified phage orders.")
+cls.add_figure(fig_path, caption="Relative abundance of classified phage orders.", width="80%")
 
 refs = report.add_section("04", "References")
 refs.add_references(

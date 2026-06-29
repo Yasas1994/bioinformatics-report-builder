@@ -84,7 +84,7 @@ summary.add_metrics(
 
 financials = report.add_section("02", "Financial Performance")
 financials.add_subsection("Revenue trend", "s2-revenue")
-financials.add_figure(fig_path, caption="Quarterly revenue for FY2026.")
+financials.add_figure(fig_path, caption="Quarterly revenue for FY2026.", width="80%")
 financials.add_subsection("Key ratios", "s2-ratios")
 financials.add_table(
     headers=["Metric", "Q1", "Q2", "Change"],

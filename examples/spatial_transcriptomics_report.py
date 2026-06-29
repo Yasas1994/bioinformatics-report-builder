@@ -101,7 +101,9 @@ qc.add_table(
 
 spatial = report.add_section("03", "Spatial Domains", count="Seurat · SCTransform")
 spatial.add_subsection("Cluster map", "s3-clusters")
-spatial.add_figure(fig_path, caption="Spatial distribution of inferred tissue domains.")
+spatial.add_figure(
+    fig_path, caption="Spatial distribution of inferred tissue domains.", width="80%"
+)
 spatial.add_subsection("Differential expression", "s3-de")
 spatial.add_table(
     headers=["Domain", "Top marker", "Avg log2FC", "p-value"],

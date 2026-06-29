@@ -111,7 +111,9 @@ omics.add_table(
 integration = report.add_section("03", "Integration", count="MOFA2")
 integration.add_subsection("Correlation overview", "s3-corr")
 integration.add_figure(
-    fig_path, caption="Pairwise correlation across omics layers and clinical scores."
+    fig_path,
+    caption="Pairwise correlation across omics layers and clinical scores.",
+    width="70%",
 )
 integration.add_text(
     "The joint factorisation models each omics view as "

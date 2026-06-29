@@ -42,7 +42,6 @@ report = Report(
     date="2026-06-26",
     run_label="scRNA-seq v8.0 · Zeus HPC",
     run_status="Pipeline complete · 8,412 cells",
-    sidebar_footer="Pipeline complete",
     # Swap the logo to any SVG, PNG or JPG; use set_logo() or omit for a placeholder.
     logo_path=Path(__file__).resolve().parent / "assets" / "Unimed_logo.svg",
     footer_left="scRNA-seq pipeline · 2026-06-26",
@@ -92,7 +91,7 @@ qc.add_table(
 
 clustering = report.add_section("03", "Clustering", count="Scanpy · Leiden")
 clustering.add_subsection("UMAP", "s3-umap")
-clustering.add_figure(fig_path, caption="UMAP embedding coloured by Leiden cluster.")
+clustering.add_figure(fig_path, caption="UMAP embedding coloured by Leiden cluster.", width="80%")
 clustering.add_subsection("Marker genes", "s3-markers")
 clustering.add_table(
     headers=["Cluster", "Top marker", "p-value", "Log2FC"],
