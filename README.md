@@ -195,7 +195,7 @@ chaining.
 | `add_subsection(title, anchor=None)` | Add a subsection heading with an anchor for the sidebar. |
 | `add_text(text)` | Add a plain paragraph (HTML-escaped). |
 | `add_notice(tag, text, kind="info" \| "warn")` | Add an info/warn notice strip. |
-| `add_table(headers, rows, caption="", col_classes=..., cell_classes=...)` | Add a data table. `cell_classes` should have the same shape as `rows`. |
+| `add_table(headers, rows, df, caption="", col_classes=..., cell_classes=..., paginate=False, page_size=25)` | Add a data table. Provide `headers`+`rows` **or** a pandas `df`. `cell_classes` should have the same shape as `rows`. Set `paginate=True` for client-side pagination. |
 | `add_freq_bars(data, low_threshold=15.0)` | Add a minimal horizontal bar chart from `(label, percent)` tuples. |
 | `add_figure(path, caption, label=None)` | Reference a figure; the file is copied to `assets/`. |
 | `add_code(language, code)` | Add a styled code block. |
@@ -278,6 +278,36 @@ report = Report(
     extra_css=".masthead { background: #f0f4fa; }",
 )
 ```
+
+### Paginate long tables
+
+```python
+section = report.add_section("02", "Samples")
+section.add_table(
+    headers=["Sample ID", "Reads", "Status"],
+    rows=[...],  # hundreds of rows
+    paginate=True,
+    page_size=25,
+)
+```
+
+This renders Prev / Next buttons below the table and shows 25 rows per page in the browser.
+
+### Pass a pandas DataFrame
+
+```python
+import pandas as pd
+
+section = report.add_section("02", "QC")
+df = pd.DataFrame({
+    "Sample": ["S1", "S2", "S3"],
+    "Reads": [22_000_000, 19_000_000, 25_000_000],
+    "Status": ["pass", "warn", "pass"],
+})
+section.add_table(df=df, caption="Sample QC summary")
+```
+
+Column names become headers and all values are converted to strings. `pandas` is an optional dependency.
 
 ### Include LaTeX math
 
