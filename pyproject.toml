@@ -25,7 +25,7 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["matplotlib", "numpy", "markdown", "ruff>=0.4.0"]
+dev = ["matplotlib", "numpy", "markdown", "ruff>=0.4.0", "mypy>=1.10.0"]
 test = ["pytest", "pytest-cov"]
 
 [project.urls]
