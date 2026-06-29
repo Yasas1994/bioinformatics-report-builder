@@ -27,7 +27,7 @@ body {
   background: var(--page);
   color: var(--deep);
   display: grid;
-  grid-template-columns: var(--nav-w) 1fr;
+  grid-template-columns: var(--nav-w) 1fr var(--nav-w);
   grid-template-rows: 1fr auto;
   min-height: 100vh;
   line-height: 1.5;
@@ -548,6 +548,7 @@ code.sourceCode {
   padding: 1rem 3rem;
   border-top: 2px solid var(--navy);
   border-right: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
   display: flex;
   justify-content: space-between;
   align-items: center;
