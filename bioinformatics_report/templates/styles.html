@@ -27,6 +27,7 @@ body {
   background: var(--page);
   color: var(--deep);
   display: flex;
+  flex-wrap: wrap;
   min-height: 100vh;
   line-height: 1.5;
 }
@@ -549,6 +550,10 @@ code.sourceCode {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
+  width: 100%;
+  flex-basis: 100%;
+  background: var(--white);
+  box-sizing: border-box;
 }
 
 .report-footer span {
