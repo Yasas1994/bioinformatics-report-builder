@@ -225,7 +225,7 @@ class _Figure:
             f'  <div class="figure-area">'
             f'<div class="figure-canvas">'
             f'<img src="{src}" alt="{html.escape(self.caption)}" '
-            f'style="max-width:100%; max-height:100%; object-fit:contain;">'
+            f'style="max-width:100%; height:auto; display:block;">'
             f"</div>"
             f'<div class="figure-label"><b>{html.escape(self.label)}</b> · '
             f"{html.escape(self.caption)}</div></div>"
