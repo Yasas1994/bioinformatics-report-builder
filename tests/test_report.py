@@ -98,6 +98,68 @@ def test_add_table_accepts_cells(out_dir: Path, tmp_report: Report) -> None:
     assert '<td class="mono">1</td>' in text
 
 
+def test_add_table_paginated_renders_pager(out_dir: Path, tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Table")
+    section.add_table(
+        headers=["A"],
+        rows=[[str(i)] for i in range(5)],
+        paginate=True,
+        page_size=2,
+    )
+    qmd = tmp_report.save(out_dir)
+    text = qmd.read_text(encoding="utf-8")
+    assert 'class="table-pager"' in text
+    assert "Page 1 of 3" in text
+    assert "table-pager-prev" in text
+    assert "table-pager-next" in text
+
+
+def test_add_table_not_paginated_has_no_pager(out_dir: Path, tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Table")
+    section.add_table(headers=["A"], rows=[["1"], ["2"], ["3"], ["4"]])
+    qmd = tmp_report.save(out_dir)
+    text = qmd.read_text(encoding="utf-8")
+    assert "table-pager" not in text
+
+
+def test_add_table_from_dataframe(out_dir: Path, tmp_report: Report) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    section = tmp_report.add_section("02", "Table")
+    section.add_table(df=pd.DataFrame({"A": [1, 2], "B": ["x", "y"]}), caption="DF table")
+    qmd = tmp_report.save(out_dir)
+    text = qmd.read_text(encoding="utf-8")
+    assert "DF table" in text
+    assert "<th>A</th>" in text
+    assert "<th>B</th>" in text
+    assert "<td>1</td>" in text
+    assert "<td>x</td>" in text
+
+
+def test_add_table_dataframe_requires_pandas(tmp_report: Report) -> None:
+    pandas = sys.modules.get("pandas")
+    sys.modules["pandas"] = None  # type: ignore[assignment]
+    try:
+        section = tmp_report.add_section("02", "Table")
+        with pytest.raises(ImportError, match="pandas"):
+            section.add_table(df="not-a-dataframe")  # type: ignore[arg-type]
+    finally:
+        if pandas is not None:
+            sys.modules["pandas"] = pandas
+        else:
+            sys.modules.pop("pandas", None)
+
+
+def test_add_table_rejects_df_and_rows_together(tmp_report: Report) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    section = tmp_report.add_section("02", "Table")
+    with pytest.raises(ValueError, match="either a DataFrame"):
+        section.add_table(headers=["A"], rows=[["1"]], df=pd.DataFrame({"A": ["2"]}))
+
+
 def test_add_list(out_dir: Path, tmp_report: Report) -> None:
     section = tmp_report.add_section("02", "List")
     section.add_list(["first", "second"], ordered=True)

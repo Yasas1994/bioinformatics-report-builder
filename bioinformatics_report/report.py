@@ -139,9 +139,12 @@ class _Table:
     caption: str
     col_classes: list[str | None] | None = None
     cell_classes: list[list[str | None]] | None = None
+    paginate: bool = False
+    page_size: int = 25
 
     def render(self, section: Section, asset_rel_prefix: str) -> str:
-        out = ['  <table class="data-table">', "    <thead>", "      <tr>"]
+        table_id = f"table-{id(self)}"
+        out = ['  <table class="data-table" id="' + table_id + '">', "    <thead>", "      <tr>"]
         for h in self.headers:
             out.append(f"        <th>{html.escape(h)}</th>")
         out.append("      </tr>")
@@ -172,7 +175,20 @@ class _Table:
                 f'  <p style="font-family:var(--mono); font-size:0.58rem; '
                 f'color:var(--mist); margin-top:0.4rem">{html.escape(self.caption)}</p>'
             )
+        if self.paginate and self.rows:
+            out.append(self._pagination_html(table_id))
         return "\n".join(out)
+
+    def _pagination_html(self, table_id: str) -> str:
+        total_pages = max(1, (len(self.rows) + self.page_size - 1) // self.page_size)
+        return (
+            f'<div class="table-pager" id="{table_id}-pager" data-table="{table_id}" '
+            f'data-page-size="{self.page_size}">'
+            f'<button class="table-pager-prev" disabled>‹ Prev</button>'
+            f'<span class="table-pager-info">Page 1 of {total_pages}</span>'
+            f'<button class="table-pager-next">Next ›</button>'
+            f"</div>"
+        )
 
 
 @dc.dataclass
@@ -389,18 +405,45 @@ class Section:
 
     def add_table(
         self,
-        headers: Sequence[str],
-        rows: Sequence[Sequence[Any]],
+        headers: Sequence[str] | None = None,
+        rows: Sequence[Sequence[Any]] | None = None,
+        df: Any = None,
         caption: str = "",
         col_classes: Sequence[str | None] | None = None,
         cell_classes: Sequence[Sequence[str | None]] | None = None,
+        paginate: bool = False,
+        page_size: int = 25,
     ) -> Section:
         """Add a data table.
+
+        Provide either ``headers`` + ``rows`` or a pandas ``df``.
 
         ``col_classes`` applies a CSS class to every cell in a column.
         ``cell_classes`` overrides it on a per-cell basis and should have the
         same shape as ``rows``.
+
+        Set ``paginate=True`` to render the table with client-side page
+        navigation showing ``page_size`` rows per page.
         """
+        if df is not None:
+            if headers is not None or rows is not None:
+                raise ValueError(
+                    "pass either a DataFrame ('df') or explicit 'headers' and 'rows', not both"
+                )
+            try:
+                import pandas as pd  # type: ignore[import-untyped]
+            except ImportError as exc:
+                raise ImportError(
+                    "pandas is required for add_table(df=...); install it with: pip install pandas"
+                ) from exc
+            if not isinstance(df, pd.DataFrame):
+                raise TypeError("df must be a pandas DataFrame")
+            headers = list(df.columns.astype(str))
+            rows = [[_cell_text(c) for c in row] for row in df.values.tolist()]
+        else:
+            if headers is None or rows is None:
+                raise ValueError("add_table requires either 'df' or both 'headers' and 'rows'")
+
         headers = list(headers)
         if not headers:
             raise ValueError("table headers must not be empty")
@@ -418,6 +461,8 @@ class Section:
                 caption=_validate_str(caption, "caption"),
                 col_classes=list(col_classes) if col_classes else None,
                 cell_classes=[list(r) for r in cell_classes] if cell_classes else None,
+                paginate=bool(paginate),
+                page_size=int(page_size),
             )
         )
         return self

@@ -578,4 +578,44 @@ p {
   color: var(--steel);
   margin: 0.4rem 0 0 0;
 }
+
+/* Table pagination */
+.table-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--steel);
+}
+
+.table-pager button {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--navy);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.table-pager button:hover:not(:disabled) {
+  background: var(--ice);
+}
+
+.table-pager button:disabled {
+  color: var(--mist);
+  border-color: var(--ice);
+  cursor: default;
+}
+
+.table-pager-info {
+  color: var(--deep);
+  min-width: 6rem;
+  text-align: center;
+}
 </style>
