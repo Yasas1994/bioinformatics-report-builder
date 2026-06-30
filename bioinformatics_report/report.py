@@ -401,6 +401,16 @@ class _FigurePanel:
     columns: int
     panel_caption: str | None = None
     panel_label: str | None = None
+    sub_labels: list[str] | None = None
+
+    def _auto_sub_labels(self) -> list[str]:
+        labels = []
+        for i in range(len(self.figures)):
+            if i < 26:
+                labels.append(f"({chr(ord('a') + i)})")
+            else:
+                labels.append(f"({i - 25})")
+        return labels
 
     def render(self, section: Section, asset_rel_prefix: str) -> str:
         if self.layout == "column":
@@ -408,10 +418,29 @@ class _FigurePanel:
         else:
             grid_style = f"grid-template-columns: repeat({self.columns}, 1fr);"
 
-        items_html = "\n".join(
-            f'    <div class="figure-panel-item">{fig.render(section, asset_rel_prefix)}</div>'
-            for fig in self.figures
-        )
+        suppress_individual = self.panel_caption is not None
+        if self.sub_labels is None:
+            sub_labels = self._auto_sub_labels() if suppress_individual else []
+        else:
+            sub_labels = self.sub_labels
+
+        items_html: list[str] = []
+        for i, fig in enumerate(self.figures):
+            sub_label = html.escape(sub_labels[i]) if i < len(sub_labels) else ""
+            sub_label_html = f'<div class="figure-sub-label">{sub_label}</div>' if sub_label else ""
+            if suppress_individual:
+                # Strip the individual caption/label; keep only the image.
+                img_html = fig.render(section, asset_rel_prefix)
+                # Remove the figure-label div.
+                img_only = img_html.split('<div class="figure-label">')[0]
+                items_html.append(
+                    f'    <div class="figure-panel-item">{sub_label_html}{img_only}</div>'
+                )
+            else:
+                items_html.append(
+                    f'    <div class="figure-panel-item">'
+                    f"{fig.render(section, asset_rel_prefix)}</div>"
+                )
 
         caption_html = ""
         if self.panel_caption:
@@ -422,9 +451,10 @@ class _FigurePanel:
                 f"{html.escape(self.panel_caption)}</div>"
             )
 
+        items_block = "\n".join(items_html)
         return (
             f'  <div class="figure-panel" style="{grid_style}">\n'
-            f"{items_html}\n"
+            f"{items_block}\n"
             f"  </div>{caption_html}"
         )
 
@@ -796,6 +826,7 @@ class Section:
         layout: str | int = "row",
         panel_caption: str | None = None,
         panel_label: str | None = None,
+        sub_labels: Sequence[str] | bool | None = None,
     ) -> Section:
         """Add a panel of figures arranged in a row, column, or grid.
 
@@ -806,14 +837,18 @@ class Section:
 
         ``layout`` controls the arrangement:
 
-        * ``"row"`` (default) — all figures side by side in one row.
-        * ``"column"`` — figures stacked vertically.
-        * an integer ``n`` — a grid with ``n`` columns (rows flow automatically).
-          For example, ``layout=3`` with six figures produces a 3×2 matrix.
+        * ``"row"`` (default) -- all figures side by side in one row.
+        * ``"column"`` -- figures stacked vertically.
+        * an integer ``n`` -- a grid with ``n`` columns (rows flow automatically).
+          For example, ``layout=3`` with six figures produces a 3x2 matrix.
 
         Each figure receives its own label from the section figure counter,
         unless custom labels are supplied. An optional ``panel_caption`` can
-        describe the whole panel.
+        describe the whole panel. When ``panel_caption`` is provided, individual
+        figure captions are suppressed and each sub-image is automatically
+        labelled ``(a)``, ``(b)``, ... in its top-left corner. Pass
+        ``sub_labels=False`` to disable the sub-labels, or pass a list of
+        custom strings to override the auto-generated labels.
         """
         if not figures:
             raise ValueError("figure panel must contain at least one figure")
@@ -906,6 +941,19 @@ class Section:
                 )
             )
 
+        panel_sub_labels: list[str] | None
+        if sub_labels is None:
+            panel_sub_labels = None
+        elif isinstance(sub_labels, bool):
+            panel_sub_labels = None if sub_labels else []
+        else:
+            panel_sub_labels = list(sub_labels)
+            if len(panel_sub_labels) != len(figures):
+                raise ValueError(
+                    f"figures ({len(figures)}) and sub_labels ({len(panel_sub_labels)}) "
+                    "must have the same length"
+                )
+
         self.items.append(
             _FigurePanel(
                 figures=figure_objs,
@@ -913,6 +961,7 @@ class Section:
                 columns=columns,
                 panel_caption=_validate_optional_str(panel_caption, "panel caption"),
                 panel_label=_validate_optional_str(panel_label, "panel label"),
+                sub_labels=panel_sub_labels,
             )
         )
         return self

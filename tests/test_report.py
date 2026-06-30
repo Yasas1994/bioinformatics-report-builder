@@ -524,6 +524,51 @@ def test_add_figure_panel_caption(out_dir: Path, tmp_path: Path, tmp_report: Rep
     text = qmd.read_text(encoding="utf-8")
     assert 'class="figure-panel-caption"' in text
     assert "<b>Panel 1</b> · Overall panel description" in text
+    assert 'class="figure-sub-label"' in text
+    assert ">(a)<" in text
+    assert ">(b)<" in text
+    assert "<b>Fig. 1</b> · A" not in text
+    assert "<b>Fig. 2</b> · B" not in text
+
+
+def test_add_figure_panel_custom_sub_labels(
+    out_dir: Path, tmp_path: Path, tmp_report: Report
+) -> None:
+    (tmp_path / "a.png").write_text("fake png", encoding="utf-8")
+    (tmp_path / "b.png").write_text("fake png", encoding="utf-8")
+    section = tmp_report.add_section("02", "Panel")
+    section.add_figure_panel(
+        [tmp_path / "a.png", tmp_path / "b.png"],
+        captions=["A", "B"],
+        layout="row",
+        panel_caption="Panel with custom sub-labels",
+        sub_labels=["(I)", "(II)"],
+    )
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert ">(I)<" in text
+    assert ">(II)<" in text
+    assert ">(a)<" not in text
+
+
+def test_add_figure_panel_sub_labels_disabled(
+    out_dir: Path, tmp_path: Path, tmp_report: Report
+) -> None:
+    (tmp_path / "a.png").write_text("fake png", encoding="utf-8")
+    (tmp_path / "b.png").write_text("fake png", encoding="utf-8")
+    section = tmp_report.add_section("02", "Panel")
+    section.add_figure_panel(
+        [tmp_path / "a.png", tmp_path / "b.png"],
+        captions=["A", "B"],
+        panel_caption="Panel without sub-labels",
+        sub_labels=False,
+    )
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert 'class="figure-sub-label"' not in text
+    assert 'class="figure-panel-caption"' in text
 
 
 def test_add_figure_panel_missing_captions(tmp_report: Report) -> None:

@@ -544,12 +544,27 @@ main {
 }
 
 .figure-panel .figure-panel-item {
+  position: relative;
   min-width: 0;
 }
 
 .figure-panel .figure-canvas {
   min-height: 120px;
   background: var(--white);
+}
+
+.figure-sub-label {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--navy);
+  z-index: 1;
 }
 
 .figure-panel-caption {
