@@ -98,6 +98,37 @@ def test_add_table_accepts_cells(out_dir: Path, tmp_report: Report) -> None:
     assert '<td class="mono">1</td>' in text
 
 
+def test_add_table_auto_numbers(out_dir: Path, tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Table")
+    section.add_table(headers=["A"], rows=[["1"]], caption="First")
+    section.add_table(headers=["B"], rows=[["2"]], caption="Second")
+    qmd = tmp_report.save(out_dir)
+    text = qmd.read_text(encoding="utf-8")
+    assert "<b>Table 1</b> · First" in text
+    assert "<b>Table 2</b> · Second" in text
+
+
+def test_add_table_custom_label(out_dir: Path, tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Table")
+    section.add_table(
+        headers=["A"],
+        rows=[["1"]],
+        caption="My table",
+        label="Tab. A",
+    )
+    qmd = tmp_report.save(out_dir)
+    text = qmd.read_text(encoding="utf-8")
+    assert "<b>Tab. A</b> · My table" in text
+
+
+def test_add_table_no_caption_no_label(out_dir: Path, tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Table")
+    section.add_table(headers=["A"], rows=[["1"]])
+    qmd = tmp_report.save(out_dir)
+    text = qmd.read_text(encoding="utf-8")
+    assert "table-caption" not in text
+
+
 def test_add_table_paginated_renders_pager(out_dir: Path, tmp_report: Report) -> None:
     section = tmp_report.add_section("02", "Table")
     section.add_table(

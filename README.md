@@ -206,7 +206,7 @@ chaining.
 | `add_subsection(title, anchor=None)` | Add a subsection heading with an anchor for the sidebar. |
 | `add_text(text)` | Add a plain paragraph (HTML-escaped). |
 | `add_notice(tag, text, kind="info" \| "warn")` | Add an info/warn notice strip. |
-| `add_table(headers, rows, df, caption="", col_classes=..., cell_classes=..., paginate=False, page_size=25)` | Add a data table. Provide `headers`+`rows` **or** a pandas `df`. `cell_classes` should have the same shape as `rows`. Set `paginate=True` for client-side pagination. |
+| `add_table(headers, rows, df, caption="", label=None, col_classes=..., cell_classes=..., paginate=False, page_size=25)` | Add a data table. Provide `headers`+`rows` **or** a pandas `df`. Tables are auto-numbered (`Table 1`, `Table 2`...) when a `caption` is given. Pass `label` to override. Set `paginate=True` for client-side pagination. |
 | `add_freq_bars(data, low_threshold=15.0)` | Add a minimal horizontal bar chart from `(label, percent)` tuples. |
 | `add_figure(path, caption, label=None, width=None, height=None, scale=None)` | Reference a PNG, JPG or SVG figure; the file is copied to `assets/` (SVGs are referenced via `<img>`). Native size by default. Pass `width`/`height` for explicit dimensions, or `scale` (e.g. `0.5`) to size relative to the image's intrinsic pixel dimensions. |
 | `add_code(language, code, open=False)` | Add a collapsible code block. Hidden by default; pass `open=True` to reveal it on load. |

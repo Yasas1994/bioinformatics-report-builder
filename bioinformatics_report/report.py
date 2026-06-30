@@ -206,6 +206,7 @@ class _Table:
     headers: list[str]
     rows: list[list[str]]
     caption: str
+    label: str = ""
     col_classes: list[str | None] | None = None
     cell_classes: list[list[str | None]] | None = None
     paginate: bool = False
@@ -239,8 +240,14 @@ class _Table:
             out.append("      </tr>")
         out.append("    </tbody>")
         out.append("  </table>")
-        if self.caption:
-            out.append(f'  <p class="table-caption">{html.escape(self.caption)}</p>')
+        if self.caption or self.label:
+            if self.label and self.caption:
+                caption_html = f"<b>{html.escape(self.label)}</b> · {html.escape(self.caption)}"
+            elif self.label:
+                caption_html = f"<b>{html.escape(self.label)}</b>"
+            else:
+                caption_html = html.escape(self.caption)
+            out.append(f'  <p class="table-caption">{caption_html}</p>')
         if self.paginate and self.rows:
             out.append(self._pagination_html(table_id))
         return "\n".join(out)
@@ -450,6 +457,7 @@ class Section:
         self.items: list[_Renderable] = []
         self._subsection_counter = 0
         self._figure_counter = 0
+        self._table_counter = 0
 
     # ------------------------------------------------------------------ public
     def set_overview(self, text: str) -> Section:
@@ -513,6 +521,7 @@ class Section:
         rows: Sequence[Sequence[Any]] | None = None,
         df: Any = None,
         caption: str = "",
+        label: str | None = None,
         col_classes: Sequence[str | None] | None = None,
         cell_classes: Sequence[Sequence[str | None]] | None = None,
         paginate: bool = False,
@@ -528,6 +537,9 @@ class Section:
 
         Set ``paginate=True`` to render the table with client-side page
         navigation showing ``page_size`` rows per page.
+
+        Tables are auto-numbered (``Table 1``, ``Table 2``, ...) when a
+        ``caption`` is supplied and ``label`` is omitted.
         """
         if df is not None:
             if headers is not None or rows is not None:
@@ -558,11 +570,21 @@ class Section:
                     f"row length ({len(row)}) does not match header length ({len(headers)})"
                 )
             str_rows.append([_cell_text(c) for c in row])
+        caption_str = _validate_str(caption, "caption")
+        if label is None:
+            if caption_str:
+                self._table_counter += 1
+                label_str = f"Table {self._table_counter}"
+            else:
+                label_str = ""
+        else:
+            label_str = _validate_str(label, "table label")
         self.items.append(
             _Table(
                 headers=headers,
                 rows=str_rows,
-                caption=_validate_str(caption, "caption"),
+                caption=caption_str,
+                label=label_str,
                 col_classes=list(col_classes) if col_classes else None,
                 cell_classes=[list(r) for r in cell_classes] if cell_classes else None,
                 paginate=bool(paginate),
