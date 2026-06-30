@@ -620,7 +620,7 @@ class Section:
         if self.overview:
             lines.append(
                 f'  <p style="font-size:0.82rem; color:var(--steel); '
-                f'max-width:600px; margin-bottom:1.5rem; line-height:1.7">'
+                f'margin-bottom:1.5rem; line-height:1.7">'
                 f"{html.escape(self.overview)}</p>"
             )
 

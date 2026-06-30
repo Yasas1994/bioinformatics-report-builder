@@ -40,7 +40,7 @@ format:
     <h2>Executive Summary</h2>
     <span class="section-count">Overview</span>
   </div>
-  <p style="font-size:0.82rem; color:var(--steel); max-width:600px; margin-bottom:1.5rem; line-height:1.7">
+  <p style="font-size:0.82rem; color:var(--steel); margin-bottom:1.5rem; line-height:1.7">
     Replace this overview with a concise summary of the analysis.
   </p>
   <div class="metric-strip" style="grid-template-columns: repeat(5, 1fr)">
