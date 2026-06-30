@@ -117,6 +117,15 @@ def _cell_text(value: Any) -> str:
     return str(value)
 
 
+def _to_float(value: str) -> float | None:
+    """Parse a string as a float, tolerating commas and percent signs."""
+    text = value.strip().replace(",", "").replace("%", "")
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
 def _contains_math_delimiter(text: str) -> bool:
     """Return True if the user has already wrapped the expression in delimiters."""
     return any(d in text for d in ("\\(", "\\)", "\\[", "\\]", "$$"))
@@ -211,19 +220,32 @@ class _Table:
     cell_classes: list[list[str | None]] | None = None
     paginate: bool = False
     page_size: int = 25
+    highlight: dict[str, Any] | None = None
+    sortable: bool = False
 
     def render(self, section: Section, asset_rel_prefix: str) -> str:
         table_id = f"table-{id(self)}"
-        out = ['  <table class="data-table" id="' + table_id + '">', "    <thead>", "      <tr>"]
-        for h in self.headers:
-            out.append(f"        <th>{html.escape(h)}</th>")
+        highlight_idx = self._highlight_col_index()
+        highlighted_rows = self._highlighted_row_indices(highlight_idx)
+        numeric_cols = self._numeric_column_indices() if self.sortable else set()
+
+        table_attrs = f'class="data-table" id="{table_id}"'
+        if self.sortable:
+            table_attrs += ' data-sortable="true"'
+        out = [f"  <table {table_attrs}>", "    <thead>", "      <tr>"]
+        for i, h in enumerate(self.headers):
+            th_attrs = ""
+            if i in numeric_cols:
+                th_attrs = ' data-sortable="numeric"'
+            out.append(f"        <th{th_attrs}>{html.escape(h)}</th>")
         out.append("      </tr>")
         out.append("    </thead>")
         out.append("    <tbody>")
         for r_idx, row in enumerate(self.rows):
-            out.append("      <tr>")
+            row_cls = "highlight" if r_idx in highlighted_rows else ""
+            out.append(f'      <tr class="{row_cls}">')
             for i, cell in enumerate(row):
-                cls = ""
+                cls = []
                 if (
                     self.cell_classes
                     and r_idx < len(self.cell_classes)
@@ -235,8 +257,14 @@ class _Table:
                 else:
                     c = None
                 if c:
-                    cls = f' class="{html.escape(c)}"'
-                out.append(f"        <td{cls}>{html.escape(cell)}</td>")
+                    cls.append(html.escape(c))
+                cls_attr = f' class="{" ".join(cls)}"' if cls else ""
+                sort_attr = ""
+                if i in numeric_cols:
+                    val = _to_float(cell)
+                    if val is not None:
+                        sort_attr = f' data-sort-value="{val}"'
+                out.append(f"        <td{cls_attr}{sort_attr}>{html.escape(cell)}</td>")
             out.append("      </tr>")
         out.append("    </tbody>")
         out.append("  </table>")
@@ -251,6 +279,46 @@ class _Table:
         if self.paginate and self.rows:
             out.append(self._pagination_html(table_id))
         return "\n".join(out)
+
+    def _highlight_col_index(self) -> int | None:
+        if not self.highlight:
+            return None
+        col = self.highlight.get("col")
+        if col is None:
+            return None
+        try:
+            return self.headers.index(col)
+        except ValueError as exc:
+            raise ValueError(f"highlight_col '{col}' not found in table headers") from exc
+
+    def _highlighted_row_indices(self, highlight_idx: int | None) -> set[int]:
+        if highlight_idx is None:
+            return set()
+        cutoff = float(self.highlight["cutoff"])  # type: ignore[index]
+        direction = str(self.highlight["direction"])  # type: ignore[index]
+        ops = {
+            "lt": lambda x, y: x < y,
+            "le": lambda x, y: x <= y,
+            "gt": lambda x, y: x > y,
+            "ge": lambda x, y: x >= y,
+            "eq": lambda x, y: x == y,
+        }
+        op = ops.get(direction)
+        if op is None:
+            raise ValueError(f"highlight_direction must be one of {sorted(ops)}, got '{direction}'")
+        highlighted: set[int] = set()
+        for r_idx, row in enumerate(self.rows):
+            val = _to_float(row[highlight_idx])
+            if val is not None and op(val, cutoff):
+                highlighted.add(r_idx)
+        return highlighted
+
+    def _numeric_column_indices(self) -> set[int]:
+        numeric: set[int] = set()
+        for col_idx in range(len(self.headers)):
+            if all(_to_float(row[col_idx]) is not None for row in self.rows):
+                numeric.add(col_idx)
+        return numeric
 
     def _pagination_html(self, table_id: str) -> str:
         total_pages = max(1, (len(self.rows) + self.page_size - 1) // self.page_size)
@@ -526,6 +594,10 @@ class Section:
         cell_classes: Sequence[Sequence[str | None]] | None = None,
         paginate: bool = False,
         page_size: int = 25,
+        highlight_col: str | None = None,
+        highlight_cutoff: float = 0.0,
+        highlight_direction: str = "lt",
+        sortable: bool = False,
     ) -> Section:
         """Add a data table.
 
@@ -540,6 +612,14 @@ class Section:
 
         Tables are auto-numbered (``Table 1``, ``Table 2``, ...) when a
         ``caption`` is supplied and ``label`` is omitted.
+
+        Row highlighting: pass ``highlight_col`` (header name),
+        ``highlight_cutoff`` (numeric threshold) and ``highlight_direction``
+        (``"lt"``, ``"le"``, ``"gt"``, ``"ge"`` or ``"eq"``). Matching rows
+        receive a pastel background.
+
+        Sorting: set ``sortable=True`` to let readers click numeric column
+        headers to sort ascending/descending.
         """
         if df is not None:
             if headers is not None or rows is not None:
@@ -579,6 +659,25 @@ class Section:
                 label_str = ""
         else:
             label_str = _validate_str(label, "table label")
+
+        highlight: dict[str, Any] | None = None
+        if highlight_col is not None:
+            col_name = _validate_str(highlight_col, "highlight_col")
+            if col_name not in headers:
+                raise ValueError(f"highlight_col '{col_name}' not found in table headers")
+            if not isinstance(highlight_cutoff, (int, float)) or isinstance(highlight_cutoff, bool):
+                raise TypeError(
+                    f"highlight_cutoff must be a number, got {type(highlight_cutoff).__name__}"
+                )
+            direction = _validate_choice(
+                highlight_direction, {"lt", "le", "gt", "ge", "eq"}, "highlight_direction"
+            )
+            highlight = {
+                "col": col_name,
+                "cutoff": float(highlight_cutoff),
+                "direction": direction,
+            }
+
         self.items.append(
             _Table(
                 headers=headers,
@@ -589,6 +688,8 @@ class Section:
                 cell_classes=[list(r) for r in cell_classes] if cell_classes else None,
                 paginate=bool(paginate),
                 page_size=int(page_size),
+                highlight=highlight,
+                sortable=bool(sortable),
             )
         )
         return self
@@ -1399,38 +1500,80 @@ MathJax = {
         lines.append("}, { passive: true });")
         lines.append("updateNav();")
         lines.append("")
-        lines.append("// Client-side table pagination")
-        lines.append("document.querySelectorAll('.table-pager').forEach(pager => {")
+        lines.append("// Client-side table pagination and sorting")
+        lines.append("function getTableRows(table) {")
+        lines.append("  return Array.from(table.querySelectorAll('tbody tr'));")
+        lines.append("}")
+        lines.append("")
+        lines.append("function updatePager(pager, page) {")
         lines.append("  const tableId = pager.dataset.table;")
-        lines.append("  const pageSize = parseInt(pager.dataset.pageSize, 10) || 25;")
         lines.append("  const table = document.getElementById(tableId);")
         lines.append("  if (!table) return;")
-        lines.append("  const rows = Array.from(table.querySelectorAll('tbody tr'));")
+        lines.append("  const pageSize = parseInt(pager.dataset.pageSize, 10) || 25;")
+        lines.append("  const rows = getTableRows(table);")
         lines.append("  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));")
-        lines.append("  let currentPage = 1;")
+        lines.append("  page = Math.max(1, Math.min(page, totalPages));")
+        lines.append("  pager.dataset.currentPage = String(page);")
+        lines.append("  pager.dataset.totalPages = String(totalPages);")
+        lines.append("  rows.forEach((row, idx) => {")
+        lines.append(
+            "    row.style.display = "
+            "(idx >= (page - 1) * pageSize && idx < page * pageSize) ? '' : 'none';"
+        )
+        lines.append("  });")
+        lines.append(
+            "  pager.querySelector('.table-pager-info').textContent = "
+            "'Page ' + page + ' of ' + totalPages;"
+        )
+        lines.append("  pager.querySelector('.table-pager-prev').disabled = page === 1;")
+        lines.append("  pager.querySelector('.table-pager-next').disabled = page === totalPages;")
+        lines.append("}")
         lines.append("")
-        lines.append("  function showPage(page) {")
-        lines.append("    currentPage = page;")
-        lines.append("    rows.forEach((row, idx) => {")
-        lines.append("      const start = (currentPage - 1) * pageSize;")
-        lines.append("      const end = currentPage * pageSize;")
-        lines.append("      row.style.display = (idx >= start && idx < end) ? '' : 'none';")
-        lines.append("    });")
-        lines.append("    const info = 'Page ' + currentPage + ' of ' + totalPages;")
-        lines.append("    pager.querySelector('.table-pager-info').textContent = info;")
-        lines.append("    pager.querySelector('.table-pager-prev').disabled = currentPage === 1;")
-        lines.append("    const last = currentPage === totalPages;")
-        lines.append("    pager.querySelector('.table-pager-next').disabled = last;")
-        lines.append("  }")
-        lines.append("")
+        lines.append("document.querySelectorAll('.table-pager').forEach(pager => {")
         lines.append("  pager.querySelector('.table-pager-prev').addEventListener('click', () => {")
-        lines.append("    if (currentPage > 1) showPage(currentPage - 1);")
+        lines.append("    const current = parseInt(pager.dataset.currentPage, 10) || 1;")
+        lines.append("    updatePager(pager, current - 1);")
         lines.append("  });")
         lines.append("  pager.querySelector('.table-pager-next').addEventListener('click', () => {")
-        lines.append("    if (currentPage < totalPages) showPage(currentPage + 1);")
+        lines.append("    const current = parseInt(pager.dataset.currentPage, 10) || 1;")
+        lines.append("    updatePager(pager, current + 1);")
         lines.append("  });")
+        lines.append("  updatePager(pager, 1);")
+        lines.append("});")
         lines.append("")
-        lines.append("  showPage(1);")
+        lines.append("// Sortable tables: click numeric headers to sort; works with pagination.")
+        lines.append(
+            "document.querySelectorAll('table[data-sortable=\"true\"]').forEach(table => {"
+        )
+        lines.append("  const tbody = table.querySelector('tbody');")
+        lines.append("  if (!tbody) return;")
+        lines.append(
+            "  table.querySelectorAll('thead th[data-sortable=\"numeric\"]').forEach(th => {"
+        )
+        lines.append("    th.title = 'Click to sort';")
+        lines.append("    th.addEventListener('click', () => {")
+        lines.append("      const col = th.cellIndex;")
+        lines.append("      const currentDir = th.dataset.sortDir;")
+        lines.append("      const newDir = currentDir === 'asc' ? 'desc' : 'asc';")
+        lines.append(
+            "      table.querySelectorAll('thead th').forEach(h => delete h.dataset.sortDir);"
+        )
+        lines.append("      th.dataset.sortDir = newDir;")
+        lines.append("      const rows = getTableRows(table);")
+        lines.append("      rows.sort((a, b) => {")
+        lines.append("        const ac = a.children[col];")
+        lines.append("        const bc = b.children[col];")
+        lines.append("        if (!ac || !bc) return 0;")
+        lines.append("        const av = parseFloat(ac.dataset.sortValue || ac.textContent);")
+        lines.append("        const bv = parseFloat(bc.dataset.sortValue || bc.textContent);")
+        lines.append("        if (Number.isNaN(av) || Number.isNaN(bv)) return 0;")
+        lines.append("        return newDir === 'asc' ? av - bv : bv - av;")
+        lines.append("      });")
+        lines.append("      rows.forEach(row => tbody.appendChild(row));")
+        lines.append("      const pager = document.getElementById(table.id + '-pager');")
+        lines.append("      if (pager) updatePager(pager, 1);")
+        lines.append("    });")
+        lines.append("  });")
         lines.append("});")
         lines.append("</script>")
         return "\n".join(lines)

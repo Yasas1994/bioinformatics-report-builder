@@ -64,33 +64,71 @@
   }, { passive: true });
   updateNav();
 
-  // Client-side table pagination
-  document.querySelectorAll('.table-pager').forEach(pager => {
+  // Client-side table pagination and sorting
+  function getTableRows(table) {
+    return Array.from(table.querySelectorAll('tbody tr'));
+  }
+
+  function updatePager(pager, page) {
     const tableId = pager.dataset.table;
-    const pageSize = parseInt(pager.dataset.pageSize, 10) || 25;
     const table = document.getElementById(tableId);
     if (!table) return;
-    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const pageSize = parseInt(pager.dataset.pageSize, 10) || 25;
+    const rows = getTableRows(table);
     const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
-    let currentPage = 1;
+    page = Math.max(1, Math.min(page, totalPages));
+    pager.dataset.currentPage = String(page);
+    pager.dataset.totalPages = String(totalPages);
+    rows.forEach((row, idx) => {
+      row.style.display = (idx >= (page - 1) * pageSize && idx < page * pageSize) ? '' : 'none';
+    });
+    pager.querySelector('.table-pager-info').textContent = `Page ${page} of ${totalPages}`;
+    pager.querySelector('.table-pager-prev').disabled = page === 1;
+    pager.querySelector('.table-pager-next').disabled = page === totalPages;
+  }
 
-    function showPage(page) {
-      currentPage = page;
-      rows.forEach((row, idx) => {
-        row.style.display = (idx >= (currentPage - 1) * pageSize && idx < currentPage * pageSize) ? '' : 'none';
-      });
-      pager.querySelector('.table-pager-info').textContent = `Page ${currentPage} of ${totalPages}`;
-      pager.querySelector('.table-pager-prev').disabled = currentPage === 1;
-      pager.querySelector('.table-pager-next').disabled = currentPage === totalPages;
-    }
-
+  document.querySelectorAll('.table-pager').forEach(pager => {
     pager.querySelector('.table-pager-prev').addEventListener('click', () => {
-      if (currentPage > 1) showPage(currentPage - 1);
+      const current = parseInt(pager.dataset.currentPage, 10) || 1;
+      updatePager(pager, current - 1);
     });
     pager.querySelector('.table-pager-next').addEventListener('click', () => {
-      if (currentPage < totalPages) showPage(currentPage + 1);
+      const current = parseInt(pager.dataset.currentPage, 10) || 1;
+      updatePager(pager, current + 1);
     });
+    updatePager(pager, 1);
+  });
 
-    showPage(1);
+  // Sortable tables: click numeric headers to sort; works with pagination.
+  document.querySelectorAll('table[data-sortable="true"]').forEach(table => {
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    table.querySelectorAll('thead th[data-sortable="numeric"]').forEach(th => {
+      th.title = 'Click to sort';
+      th.addEventListener('click', () => {
+        const col = th.cellIndex;
+        const currentDir = th.dataset.sortDir;
+        const newDir = currentDir === 'asc' ? 'desc' : 'asc';
+
+        table.querySelectorAll('thead th').forEach(h => delete h.dataset.sortDir);
+        th.dataset.sortDir = newDir;
+
+        const rows = getTableRows(table);
+        rows.sort((a, b) => {
+          const ac = a.children[col];
+          const bc = b.children[col];
+          if (!ac || !bc) return 0;
+          const av = parseFloat(ac.dataset.sortValue || ac.textContent);
+          const bv = parseFloat(bc.dataset.sortValue || bc.textContent);
+          if (Number.isNaN(av) || Number.isNaN(bv)) return 0;
+          return newDir === 'asc' ? av - bv : bv - av;
+        });
+        rows.forEach(row => tbody.appendChild(row));
+
+        const pager = document.getElementById(table.id + '-pager');
+        if (pager) updatePager(pager, 1);
+      });
+    });
   });
 </script>

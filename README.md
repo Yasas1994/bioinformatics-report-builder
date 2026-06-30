@@ -206,7 +206,7 @@ chaining.
 | `add_subsection(title, anchor=None)` | Add a subsection heading with an anchor for the sidebar. |
 | `add_text(text)` | Add a plain paragraph (HTML-escaped). |
 | `add_notice(tag, text, kind="info" \| "warn")` | Add an info/warn notice strip. |
-| `add_table(headers, rows, df, caption="", label=None, col_classes=..., cell_classes=..., paginate=False, page_size=25)` | Add a data table. Provide `headers`+`rows` **or** a pandas `df`. Tables are auto-numbered (`Table 1`, `Table 2`...) when a `caption` is given. Pass `label` to override. Set `paginate=True` for client-side pagination. |
+| `add_table(headers, rows, df, caption="", label=None, col_classes=..., cell_classes=..., paginate=False, page_size=25, highlight_col=None, highlight_cutoff=0.0, highlight_direction="lt", sortable=False)` | Add a data table. Provide `headers`+`rows` **or** a pandas `df`. Tables are auto-numbered (`Table 1`, `Table 2`...) when a `caption` is given. Pass `label` to override. Set `paginate=True` for client-side pagination. Highlight rows with `highlight_col`/`highlight_cutoff`/`highlight_direction` (`"lt"`, `"le"`, `"gt"`, `"ge"`, `"eq"`). Set `sortable=True` to make numeric columns sortable by clicking headers. |
 | `add_freq_bars(data, low_threshold=15.0)` | Add a minimal horizontal bar chart from `(label, percent)` tuples. |
 | `add_figure(path, caption, label=None, width=None, height=None, scale=None)` | Reference a PNG, JPG or SVG figure; the file is copied to `assets/` (SVGs are referenced via `<img>`). Native size by default. Pass `width`/`height` for explicit dimensions, or `scale` (e.g. `0.5`) to size relative to the image's intrinsic pixel dimensions. |
 | `add_code(language, code, open=False)` | Add a collapsible code block. Hidden by default; pass `open=True` to reveal it on load. |
@@ -393,6 +393,29 @@ section.add_table(df=df, caption="Sample QC summary")
 ```
 
 Column names become headers and all values are converted to strings. `pandas` is an optional dependency.
+
+### Highlight rows and sort tables
+
+```python
+section = report.add_section("03", "Differential expression")
+section.add_table(
+    headers=["Gene", "log2FC", "p-value", "q-value"],
+    rows=[
+        ["GeneA", "1.20", "0.010", "0.045"],
+        ["GeneB", "-0.80", "0.001", "0.012"],
+        ["GeneC", "0.30", "0.200", "0.310"],
+    ],
+    caption="Significant hits (q < 0.05)",
+    highlight_col="q-value",
+    highlight_cutoff=0.05,
+    highlight_direction="lt",
+    sortable=True,
+)
+```
+
+Rows where `q-value < 0.05` receive a pastel background. Numeric columns
+(`log2FC`, `p-value`, `q-value`) become clickable headers that sort the table
+ascending/descending. Pagination, if enabled, is preserved after sorting.
 
 ### Include LaTeX math
 

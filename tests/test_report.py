@@ -153,6 +153,96 @@ def test_add_table_not_paginated_has_no_pager(out_dir: Path, tmp_report: Report)
     assert "table-pager" not in text
 
 
+def test_add_table_highlight_rows_lt(out_dir: Path, tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Table")
+    section.add_table(
+        headers=["gene", "q_val"],
+        rows=[["A", "0.50"], ["B", "0.01"], ["C", "0.04"]],
+        caption="Highlighted table",
+        highlight_col="q_val",
+        highlight_cutoff=0.05,
+        highlight_direction="lt",
+    )
+    qmd = tmp_report.save(out_dir)
+    text = qmd.read_text(encoding="utf-8")
+    rows = text.split("<tr")
+    assert any('class="highlight"' in r and ">B<" in r for r in rows)
+    assert any('class="highlight"' in r and ">C<" in r for r in rows)
+    assert not any('class="highlight"' in r and ">A<" in r for r in rows)
+
+
+def test_add_table_highlight_rows_gt(out_dir: Path, tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Table")
+    section.add_table(
+        headers=["sample", "score"],
+        rows=[["S1", "12"], ["S2", "55"], ["S3", "99"]],
+        caption="Highlighted table",
+        highlight_col="score",
+        highlight_cutoff=50,
+        highlight_direction="gt",
+    )
+    qmd = tmp_report.save(out_dir)
+    text = qmd.read_text(encoding="utf-8")
+    rows = text.split("<tr")
+    assert any('class="highlight"' in r and ">S2<" in r for r in rows)
+    assert any('class="highlight"' in r and ">S3<" in r for r in rows)
+    assert not any('class="highlight"' in r and ">S1<" in r for r in rows)
+
+
+def test_add_table_highlight_rejects_missing_col(tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Table")
+    with pytest.raises(ValueError, match="highlight_col 'q_val' not found"):
+        section.add_table(
+            headers=["gene", "p_val"],
+            rows=[["A", "0.01"]],
+            highlight_col="q_val",
+            highlight_cutoff=0.05,
+        )
+
+
+def test_add_table_highlight_rejects_invalid_direction(tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Table")
+    with pytest.raises(ValueError, match="highlight_direction must be one of"):
+        section.add_table(
+            headers=["gene", "q_val"],
+            rows=[["A", "0.01"]],
+            highlight_col="q_val",
+            highlight_cutoff=0.05,
+            highlight_direction="between",
+        )
+
+
+def test_add_table_sortable_marks_numeric_columns(out_dir: Path, tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Table")
+    section.add_table(
+        headers=["gene", "score", "status"],
+        rows=[["A", "1.2", "ok"], ["B", "3.4", "ok"]],
+        caption="Sortable table",
+        sortable=True,
+    )
+    qmd = tmp_report.save(out_dir)
+    text = qmd.read_text(encoding="utf-8")
+    assert '<table class="data-table"' in text
+    assert 'data-sortable="true"' in text
+    assert '<th data-sortable="numeric">score</th>' in text
+    assert "<th>status</th>" in text
+    assert 'data-sort-value="1.2"' in text
+
+
+def test_add_table_not_sortable_has_no_sort_attrs(out_dir: Path, tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Table")
+    section.add_table(
+        headers=["gene", "score"],
+        rows=[["A", "1.2"], ["B", "3.4"]],
+        caption="Plain table",
+    )
+    qmd = tmp_report.save(out_dir)
+    text = qmd.read_text(encoding="utf-8")
+    assert 'data-sortable="true"' not in text
+    assert 'data-sortable="numeric"' not in text
+    assert "data-sort-value" not in text
+
+
 def test_add_table_from_dataframe(out_dir: Path, tmp_report: Report) -> None:
     pytest.importorskip("pandas")
     import pandas as pd

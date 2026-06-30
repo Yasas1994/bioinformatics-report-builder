@@ -415,6 +415,30 @@ main {
 
 .data-table tbody tr:hover { background: var(--page); }
 
+.data-table tbody tr.highlight {
+  background: #fff3cd;
+}
+
+.data-table thead th[data-sortable="numeric"] {
+  cursor: pointer;
+  user-select: none;
+}
+
+.data-table thead th[data-sortable="numeric"]::after {
+  content: " ⇅";
+  opacity: 0.4;
+}
+
+.data-table thead th[data-sort-dir="asc"]::after {
+  content: " ▲";
+  opacity: 0.8;
+}
+
+.data-table thead th[data-sort-dir="desc"]::after {
+  content: " ▼";
+  opacity: 0.8;
+}
+
 .data-table tbody td {
   padding: 0.55rem 0.75rem 0.55rem 0;
   color: var(--deep);

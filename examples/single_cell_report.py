@@ -112,8 +112,12 @@ clustering.add_table(
         ["NK", "NKG7", "8.7e-29", "2.65"],
         ["DC", "FCER1A", "3.3e-21", "2.33"],
     ],
-    caption="Table 2 · Top marker genes per cluster",
+    caption="Top marker genes per cluster",
     col_classes=[None, "mono", "mono", "mono"],
+    highlight_col="p-value",
+    highlight_cutoff=1.0e-30,
+    highlight_direction="lt",
+    sortable=True,
 )
 
 refs = report.add_section("04", "References")
