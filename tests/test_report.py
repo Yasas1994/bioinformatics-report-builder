@@ -221,6 +221,33 @@ def test_add_figure_height(out_dir: Path, tmp_path: Path, tmp_report: Report) ->
     assert 'style="height:400px; width:auto; display:block;"' in text
 
 
+def test_add_code_collapsible_hidden_by_default(out_dir: Path, tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Code")
+    section.add_code("python", "x = 1")
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert '<details class="code-collapsible">' in text
+    assert '<span class="code-lang">python</span>' in text
+    assert "x = 1" in text
+    assert "open" not in text.split("<details")[1].split(">")[0]
+
+
+def test_add_code_collapsible_open(out_dir: Path, tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Code")
+    section.add_code("bash", "echo hello", open=True)
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert '<details class="code-collapsible" open>' in text
+
+
+def test_add_code_invalid_open_type(tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Code")
+    with pytest.raises(TypeError, match="open must be a bool"):
+        section.add_code("python", "x = 1", open="yes")
+
+
 def test_add_figure_width_and_height(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
     img = tmp_path / "plot.png"
     img.write_text("fake png", encoding="utf-8")

@@ -202,7 +202,7 @@ chaining.
 | `add_table(headers, rows, df, caption="", col_classes=..., cell_classes=..., paginate=False, page_size=25)` | Add a data table. Provide `headers`+`rows` **or** a pandas `df`. `cell_classes` should have the same shape as `rows`. Set `paginate=True` for client-side pagination. |
 | `add_freq_bars(data, low_threshold=15.0)` | Add a minimal horizontal bar chart from `(label, percent)` tuples. |
 | `add_figure(path, caption, label=None, width=None, height=None)` | Reference a figure; the file is copied to `assets/`. Native size by default. Pass `width` and/or `height` to set display dimensions; both together use `object-fit: contain`. |
-| `add_code(language, code)` | Add a styled code block. |
+| `add_code(language, code, open=False)` | Add a collapsible code block. Hidden by default; pass `open=True` to reveal it on load. |
 | `add_latex(tex, display=False)` | Add inline or display LaTeX. MathJax is loaded automatically. |
 | `add_references(citations)` | Add a numbered reference list. |
 | `add_list(items, ordered=False)` | Add a bulleted or numbered list. |

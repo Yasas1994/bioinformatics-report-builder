@@ -484,6 +484,55 @@ main {
 
 .figure-label b { color: var(--deep); }
 
+.code-collapsible {
+  margin: 0.75rem 0;
+  border-left: 2px solid var(--navy);
+}
+
+.code-collapsible summary {
+  cursor: pointer;
+  padding: 0.55rem 1rem;
+  background: var(--page);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--steel);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  list-style: none;
+  user-select: none;
+}
+
+.code-collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+.code-collapsible summary::before {
+  content: '▶';
+  margin-right: 0.5rem;
+  color: var(--navy);
+  transition: transform 0.2s;
+  display: inline-block;
+  font-size: 0.65rem;
+}
+
+.code-collapsible[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.code-collapsible .code-toggle::after {
+  content: 'Show code';
+}
+
+.code-collapsible[open] .code-toggle::after {
+  content: 'Hide code';
+}
+
+.code-collapsible .code-block {
+  border-left: none;
+  margin: 0;
+}
+
 .code-block {
   background: var(--page);
   border-left: 2px solid var(--navy);
@@ -494,6 +543,7 @@ main {
   overflow-x: auto;
   color: var(--deep);
   margin: 0.75rem 0;
+  white-space: pre;
 }
 
 pre.sourceCode,

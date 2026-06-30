@@ -47,6 +47,12 @@ def _validate_choice(value: Any, choices: set[str], name: str) -> str:
     return text
 
 
+def _validate_bool(value: Any, name: str) -> bool:
+    if not isinstance(value, bool):
+        raise TypeError(f"{name} must be a bool, got {type(value).__name__}")
+    return value
+
+
 def _cell_text(value: Any) -> str:
     if value is None:
         return ""
@@ -248,10 +254,19 @@ class _Figure:
 class _Code:
     language: str
     code: str
+    open: bool = False
 
     def render(self, section: Section, asset_rel_prefix: str) -> str:
         body = html.escape(self.code)
-        return f'  <div class="code-block">{body}</div>'
+        lang = html.escape(self.language)
+        open_attr = " open" if self.open else ""
+        return (
+            f'  <details class="code-collapsible"{open_attr}>\n'
+            f'    <summary><span class="code-lang">{lang}</span>'
+            f'<span class="code-toggle"></span></summary>\n'
+            f'    <div class="code-block">{body}</div>\n'
+            f"  </details>"
+        )
 
 
 @dc.dataclass
@@ -528,12 +543,16 @@ class Section:
         )
         return self
 
-    def add_code(self, language: str, code: str) -> Section:
-        """Add a styled code block."""
+    def add_code(self, language: str, code: str, open: bool = False) -> Section:
+        """Add a collapsible code block.
+
+        The block is hidden by default. Pass ``open=True`` to show it on load.
+        """
         self.items.append(
             _Code(
                 language=_validate_str(language, "language"),
                 code=_validate_str(code, "code"),
+                open=_validate_bool(open, "open"),
             )
         )
         return self

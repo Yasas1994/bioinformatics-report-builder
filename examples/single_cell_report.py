@@ -91,7 +91,15 @@ qc.add_table(
 
 clustering = report.add_section("03", "Clustering", count="Scanpy · Leiden")
 clustering.add_subsection("UMAP", "s3-umap")
-clustering.add_figure(fig_path, caption="UMAP embedding coloured by Leiden cluster.", width="80%")
+clustering.add_figure(fig_path, caption="UMAP embedding coloured by Leiden cluster.", width="50%")
+clustering.add_subsection("Reproducibility", "s3-code")
+clustering.add_code(
+    "python",
+    "import scanpy as sc\n"
+    "sc.pp.neighbors(adata, n_neighbors=15)\n"
+    "sc.tl.umap(adata)\n"
+    "sc.tl.leiden(adata, resolution=0.6)",
+)
 clustering.add_subsection("Marker genes", "s3-markers")
 clustering.add_table(
     headers=["Cluster", "Top marker", "p-value", "Log2FC"],
