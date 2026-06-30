@@ -153,6 +153,8 @@ Report(
     logo_height: str = "auto",
     footer_left: str = "",
     footer_right: str = "",
+    font_sizes: dict[str, str] | None = None,
+    page_width: str = "",
     extra_css: str | Path | None = None,
     mathjax_url: str | None = None,
     offline_mathjax: bool = False,
@@ -173,6 +175,7 @@ Report(
 | `logo_width`, `logo_height` | Logo size in the sidebar. |
 | `footer_left`, `footer_right` | Text in the page footer. |
 | `font_sizes` | Dict of font sizes for `title`, `section_title`, `subtitle`, `text`, `figure_caption`, `table_caption`. Defaults keep body text and captions the same size. |
+| `page_width` | Maximum width for the main content area, e.g. `"900px"` or `"80%"`. Empty means fill available space. |
 | `extra_css` | Path to a CSS file or raw CSS text included in the report. |
 | `mathjax_url` | Override the MathJax URL used for LaTeX rendering. |
 | `offline_mathjax` | Copy a local MathJax `tex-chtml.js` to `assets/` if found. |
@@ -186,6 +189,7 @@ Report(
 | `set_logo(path, alt=None, width=None, height=None)` | `Report` | Configure or swap the sidebar logo. Pass `None` for the placeholder. |
 | `set_sidebar_footer(text)` | `Report` | Set the bottom-of-sidebar status text. |
 | `set_run_label_prefix(text)` | `Report` | Set the small label shown above `run_label`. |
+| `set_page_width(width)` | `Report` | Set a maximum width for the main content area, e.g. `"900px"`. |
 | `save(output_dir, filename="report.qmd", assets_dir="assets")` | `Path` | Write the `.qmd`, include files and assets; returns the path to the `.qmd`. |
 
 ### `Section`
@@ -270,6 +274,23 @@ Leave `sidebar_footer` empty (the default) and the footer block is omitted:
 
 ```python
 report = Report(title_line1="Minimal", title_line2="Report")
+```
+
+### Set a maximum content width
+
+By default the report content stretches to fill the browser window. Use
+`page_width` (or `Report.set_page_width()`) to cap the width of the main area
+and footer. The sidebar keeps its fixed width.
+
+```python
+report = Report(
+    title_line1="My Report",
+    title_line2="Analysis Report",
+    page_width="900px",
+)
+
+# or fluently after construction
+report.set_page_width("80%")
 ```
 
 ### Add a custom stylesheet

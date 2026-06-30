@@ -785,6 +785,7 @@ class Report:
         footer_left: str = "",
         footer_right: str = "",
         font_sizes: dict[str, str] | None = None,
+        page_width: str = "",
         extra_css: str | Path | None = None,
         mathjax_url: str | None = None,
         offline_mathjax: bool = False,
@@ -807,6 +808,7 @@ class Report:
         self.footer_left = _validate_str(footer_left, "footer_left")
         self.footer_right = _validate_str(footer_right, "footer_right")
         self._font_sizes = self._validate_font_sizes(font_sizes)
+        self.page_width = _validate_str(page_width, "page_width")
         self.extra_css = _validate_path(extra_css, "extra_css", must_exist=False)
         self.mathjax_url = _validate_optional_str(mathjax_url, "mathjax_url")
         self.offline_mathjax = bool(offline_mathjax)
@@ -874,6 +876,13 @@ class Report:
         lines.extend(["}", "</style>"])
         return "\n".join(lines)
 
+    def _layout_css(self) -> str:
+        """Return dynamic layout overrides (currently only page width)."""
+        if not self.page_width:
+            return ""
+        width = html.escape(self.page_width)
+        return f"<style>\n  main, .report-footer {{ max-width: {width}; }}\n</style>"
+
     def set_logo(
         self,
         path: str | Path | None,
@@ -903,6 +912,15 @@ class Report:
     def set_run_label_prefix(self, text: str) -> Report:
         """Set the small label shown above ``run_label`` in the sidebar."""
         self.run_label_prefix = _validate_str(text, "run label prefix")
+        return self
+
+    def set_page_width(self, width: str) -> Report:
+        """Set a maximum width for the report content area.
+
+        Any CSS length is accepted, e.g. ``"900px"``, ``"80%"`` or ``"none"``
+        to remove a previously set limit. The sidebar keeps its fixed width.
+        """
+        self.page_width = _validate_str(width, "page_width")
         return self
 
     def _has_latex(self) -> bool:
@@ -940,11 +958,12 @@ class Report:
             src = here / name
             if src.exists():
                 shutil.copy2(src, out / name)
-        # Append dynamic font-size overrides so user-supplied sizes take effect.
+        # Append dynamic font-size and layout overrides so user-supplied values take effect.
         styles = out / "styles.html"
         if styles.exists():
+            extra = "\n".join([self._font_size_css(), self._layout_css()])
             styles.write_text(
-                styles.read_text(encoding="utf-8") + "\n" + self._font_size_css(),
+                styles.read_text(encoding="utf-8") + "\n" + extra,
                 encoding="utf-8",
             )
         (out / "footer.html").write_text(self._build_footer_script(), encoding="utf-8")

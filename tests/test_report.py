@@ -342,6 +342,27 @@ def test_font_sizes_invalid_type(tmp_report: Report) -> None:
         tmp_report.font_sizes = "large"
 
 
+def test_page_width_default_does_not_emit_css(out_dir: Path, tmp_report: Report) -> None:
+    tmp_report.save(out_dir)
+    styles = (out_dir / "styles.html").read_text(encoding="utf-8")
+    assert "main, .report-footer" not in styles
+
+
+def test_page_width_via_setter_in_styles(out_dir: Path, tmp_report: Report) -> None:
+    returned = tmp_report.set_page_width("900px")
+    assert returned is tmp_report
+    tmp_report.save(out_dir)
+    styles = (out_dir / "styles.html").read_text(encoding="utf-8")
+    assert "main, .report-footer { max-width: 900px; }" in styles
+
+
+def test_page_width_via_constructor_in_styles(out_dir: Path, tmp_report: Report) -> None:
+    report = Report(title_line1="T", title_line2="R", page_width="75%")
+    report.save(out_dir)
+    styles = (out_dir / "styles.html").read_text(encoding="utf-8")
+    assert "main, .report-footer { max-width: 75%; }" in styles
+
+
 def test_add_figure_width_and_height(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
     img = tmp_path / "plot.png"
     img.write_text("fake png", encoding="utf-8")
