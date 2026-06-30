@@ -177,6 +177,7 @@ Report(
 | `footer_left`, `footer_right` | Text in the page footer. |
 | `font_sizes` | Dict of font sizes for `title`, `section_title`, `subtitle`, `text`, `figure_caption`, `table_caption`. Defaults keep body text and captions the same size. |
 | `font_weights` | Dict of font weights for the same keys as `font_sizes`. For example, `{"subtitle": "700"}` makes subsection headings like "3.2 Reproducibility" bold. |
+| `caption_colors` | Dict of colors for `figure_caption` and `table_caption`. Default is medium gray (`#777777`). |
 | `page_width` | Maximum width for the main content area, e.g. `"900px"` or `"80%"`. Empty means fill available space. |
 | `extra_css` | Path to a CSS file or raw CSS text included in the report. |
 | `mathjax_url` | Override the MathJax URL used for LaTeX rendering. |
@@ -323,6 +324,22 @@ report = Report(
         "text": "0.9rem",
         "figure_caption": "0.9rem",
         "table_caption": "0.9rem",
+    },
+)
+```
+
+### Change caption colors
+
+Pass a `caption_colors` dict to change the color of figure and table captions.
+The default is medium gray (`#777777`).
+
+```python
+report = Report(
+    title_line1="My Report",
+    title_line2="Analysis Report",
+    caption_colors={
+        "figure_caption": "#808080",
+        "table_caption": "#808080",
     },
 )
 ```
