@@ -342,6 +342,33 @@ def test_font_sizes_invalid_type(tmp_report: Report) -> None:
         tmp_report.font_sizes = "large"
 
 
+def test_font_weights_default_in_styles(out_dir: Path, tmp_report: Report) -> None:
+    tmp_report.save(out_dir)
+    styles = (out_dir / "styles.html").read_text(encoding="utf-8")
+    assert "--fw-subtitle: 400;" in styles
+
+
+def test_font_weights_bold_subtitle_in_styles(out_dir: Path, tmp_report: Report) -> None:
+    report = Report(
+        title_line1="T",
+        title_line2="R",
+        font_weights={"subtitle": "700"},
+    )
+    report.save(out_dir)
+    styles = (out_dir / "styles.html").read_text(encoding="utf-8")
+    assert "--fw-subtitle: 700;" in styles
+
+
+def test_font_weights_invalid_key(tmp_report: Report) -> None:
+    with pytest.raises(ValueError, match="font_weights key must be one of"):
+        tmp_report.font_weights = {"bad_key": "700"}
+
+
+def test_font_weights_invalid_type(tmp_report: Report) -> None:
+    with pytest.raises(TypeError, match="font_weights must be a dict"):
+        tmp_report.font_weights = "bold"
+
+
 def test_page_width_default_does_not_emit_css(out_dir: Path, tmp_report: Report) -> None:
     tmp_report.save(out_dir)
     styles = (out_dir / "styles.html").read_text(encoding="utf-8")

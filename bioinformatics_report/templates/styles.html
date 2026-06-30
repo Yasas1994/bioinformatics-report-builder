@@ -25,6 +25,14 @@
   --fs-text:           0.82rem;
   --fs-figure-caption: 0.82rem;
   --fs-table-caption:  0.82rem;
+
+  /* Configurable font weights */
+  --fw-title:          300;
+  --fw-section-title:  600;
+  --fw-subtitle:       400;
+  --fw-text:           400;
+  --fw-figure-caption: 400;
+  --fw-table-caption:  400;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -294,6 +302,7 @@ main {
 .sub-head {
   font-family: var(--mono);
   font-size: var(--fs-subtitle);
+  font-weight: var(--fw-subtitle);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--steel);

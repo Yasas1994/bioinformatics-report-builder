@@ -154,6 +154,7 @@ Report(
     footer_left: str = "",
     footer_right: str = "",
     font_sizes: dict[str, str] | None = None,
+    font_weights: dict[str, str] | None = None,
     page_width: str = "",
     extra_css: str | Path | None = None,
     mathjax_url: str | None = None,
@@ -175,6 +176,7 @@ Report(
 | `logo_width`, `logo_height` | Logo size in the sidebar. |
 | `footer_left`, `footer_right` | Text in the page footer. |
 | `font_sizes` | Dict of font sizes for `title`, `section_title`, `subtitle`, `text`, `figure_caption`, `table_caption`. Defaults keep body text and captions the same size. |
+| `font_weights` | Dict of font weights for the same keys as `font_sizes`. For example, `{"subtitle": "700"}` makes subsection headings like "3.2 Reproducibility" bold. |
 | `page_width` | Maximum width for the main content area, e.g. `"900px"` or `"80%"`. Empty means fill available space. |
 | `extra_css` | Path to a CSS file or raw CSS text included in the report. |
 | `mathjax_url` | Override the MathJax URL used for LaTeX rendering. |
@@ -325,7 +327,23 @@ report = Report(
 )
 ```
 
-By default figure and table captions now match the body-text size.
+### Make subsection headings bold
+
+Subsection headings such as **3.2 Reproducibility** are normal weight by
+default. Use `font_weights` to make them bold:
+
+```python
+report = Report(
+    title_line1="My Report",
+    title_line2="Analysis Report",
+    font_weights={"subtitle": "700"},
+)
+```
+
+`font_weights` accepts the same keys as `font_sizes`:
+`title`, `section_title`, `subtitle`, `text`, `figure_caption`, `table_caption`.
+
+### Add tables
 
 ### Paginate long tables
 
