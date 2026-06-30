@@ -436,6 +436,121 @@ def test_add_figure_svg_reference(out_dir: Path, tmp_path: Path, tmp_report: Rep
     assert (out_dir / "assets" / "plot.svg").exists()
 
 
+def test_add_figure_panel_row(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    for name in ("a.png", "b.png", "c.png"):
+        (tmp_path / name).write_text("fake png", encoding="utf-8")
+    section = tmp_report.add_section("02", "Panel")
+    section.add_figure_panel(
+        [tmp_path / "a.png", tmp_path / "b.png", tmp_path / "c.png"],
+        captions=["Alpha", "Beta", "Gamma"],
+    )
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert 'class="figure-panel"' in text
+    assert "grid-template-columns: repeat(3, 1fr);" in text
+    assert "<b>Fig. 1</b> · Alpha" in text
+    assert "<b>Fig. 2</b> · Beta" in text
+    assert "<b>Fig. 3</b> · Gamma" in text
+    assert (out_dir / "assets" / "a.png").exists()
+    assert (out_dir / "assets" / "b.png").exists()
+    assert (out_dir / "assets" / "c.png").exists()
+
+
+def test_add_figure_panel_column(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    for name in ("a.png", "b.png"):
+        (tmp_path / name).write_text("fake png", encoding="utf-8")
+    section = tmp_report.add_section("02", "Panel")
+    section.add_figure_panel(
+        [tmp_path / "a.png", tmp_path / "b.png"],
+        captions=["Top", "Bottom"],
+        layout="column",
+    )
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert "grid-template-columns: 1fr;" in text
+    assert "<b>Fig. 1</b> · Top" in text
+    assert "<b>Fig. 2</b> · Bottom" in text
+
+
+def test_add_figure_panel_grid(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    for i in range(1, 7):
+        (tmp_path / f"img{i}.png").write_text("fake png", encoding="utf-8")
+    section = tmp_report.add_section("02", "Panel")
+    section.add_figure_panel(
+        [tmp_path / f"img{i}.png" for i in range(1, 7)],
+        captions=[f"Image {i}" for i in range(1, 7)],
+        layout=3,
+    )
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert "grid-template-columns: repeat(3, 1fr);" in text
+    assert text.count("<b>Fig.") == 6
+    assert text.count("<b>Fig. 6</b> · Image 6") == 1
+
+
+def test_add_figure_panel_with_dicts(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    (tmp_path / "a.png").write_text("fake png", encoding="utf-8")
+    (tmp_path / "b.png").write_text("fake png", encoding="utf-8")
+    section = tmp_report.add_section("02", "Panel")
+    section.add_figure_panel(
+        [
+            {"path": tmp_path / "a.png", "caption": "A", "width": "40%"},
+            {"path": tmp_path / "b.png", "caption": "B", "height": "200px"},
+        ],
+        layout="row",
+    )
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert 'style="width:40%; height:auto; display:block;"' in text
+    assert 'style="height:200px; width:auto; display:block;"' in text
+
+
+def test_add_figure_panel_caption(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    (tmp_path / "a.png").write_text("fake png", encoding="utf-8")
+    (tmp_path / "b.png").write_text("fake png", encoding="utf-8")
+    section = tmp_report.add_section("02", "Panel")
+    section.add_figure_panel(
+        [tmp_path / "a.png", tmp_path / "b.png"],
+        captions=["A", "B"],
+        panel_caption="Overall panel description",
+        panel_label="Panel 1",
+    )
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert 'class="figure-panel-caption"' in text
+    assert "<b>Panel 1</b> · Overall panel description" in text
+
+
+def test_add_figure_panel_missing_captions(tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Panel")
+    with pytest.raises(ValueError, match="captions must be provided"):
+        section.add_figure_panel(["/a.png", "/b.png"])
+
+
+def test_add_figure_panel_empty(tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Panel")
+    with pytest.raises(ValueError, match="figure panel must contain at least one figure"):
+        section.add_figure_panel([], captions=[])
+
+
+def test_add_figure_panel_invalid_layout(tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Panel")
+    with pytest.raises(ValueError, match="layout must be 'row', 'column', or an int"):
+        section.add_figure_panel(["/a.png"], captions=["A"], layout="diagonal")
+
+
+def test_add_figure_panel_copies_missing_assets(out_dir: Path, tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Panel")
+    section.add_figure_panel(["/nonexistent/a.png", "/nonexistent/b.png"], captions=["A", "B"])
+    with pytest.warns(UserWarning, match="Figure not found"):
+        tmp_report.save(out_dir)
+
+
 def test_font_sizes_default_in_styles(out_dir: Path, tmp_report: Report) -> None:
     tmp_report.save(out_dir)
     styles = out_dir / "styles.html"

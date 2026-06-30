@@ -533,6 +533,35 @@ main {
 
 .figure-label b { color: #333333; }
 
+.figure-panel {
+  display: grid;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.figure-panel .figure-area {
+  margin: 0;
+}
+
+.figure-panel .figure-panel-item {
+  min-width: 0;
+}
+
+.figure-panel .figure-canvas {
+  min-height: 120px;
+  background: var(--white);
+}
+
+.figure-panel-caption {
+  padding: 0.4rem 0.75rem;
+  border-top: 1px dashed var(--mist);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: #444444;
+  text-align: left;
+  margin-top: 0.5rem;
+}
+
 .table-caption {
   padding: 0.4rem 0.75rem;
   border-top: 1px dashed var(--mist);

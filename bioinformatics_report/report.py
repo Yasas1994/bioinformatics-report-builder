@@ -395,6 +395,41 @@ class _Figure:
 
 
 @dc.dataclass
+class _FigurePanel:
+    figures: list[_Figure]
+    layout: str
+    columns: int
+    panel_caption: str | None = None
+    panel_label: str | None = None
+
+    def render(self, section: Section, asset_rel_prefix: str) -> str:
+        if self.layout == "column":
+            grid_style = "grid-template-columns: 1fr;"
+        else:
+            grid_style = f"grid-template-columns: repeat({self.columns}, 1fr);"
+
+        items_html = "\n".join(
+            f'    <div class="figure-panel-item">{fig.render(section, asset_rel_prefix)}</div>'
+            for fig in self.figures
+        )
+
+        caption_html = ""
+        if self.panel_caption:
+            label = html.escape(self.panel_label) if self.panel_label else ""
+            label_part = f"<b>{label}</b> · " if label else ""
+            caption_html = (
+                f'  <div class="figure-panel-caption">{label_part}'
+                f"{html.escape(self.panel_caption)}</div>"
+            )
+
+        return (
+            f'  <div class="figure-panel" style="{grid_style}">\n'
+            f"{items_html}\n"
+            f"  </div>{caption_html}"
+        )
+
+
+@dc.dataclass
 class _Code:
     language: str
     code: str
@@ -748,6 +783,136 @@ class Section:
                 width=width,
                 height=height,
                 scale=float(scale) if scale is not None else None,
+            )
+        )
+        return self
+
+    def add_figure_panel(
+        self,
+        figures: Sequence[str | Path | dict[str, Any]],
+        *,
+        captions: Sequence[str] | None = None,
+        labels: Sequence[str | None] | None = None,
+        layout: str | int = "row",
+        panel_caption: str | None = None,
+        panel_label: str | None = None,
+    ) -> Section:
+        """Add a panel of figures arranged in a row, column, or grid.
+
+        ``figures`` can be a list of paths, or a list of dictionaries with
+        ``path`` (required), ``caption`` (required), and optional ``label``,
+        ``width``, ``height``, and ``scale``. When paths are supplied,
+        ``captions`` must be provided and have the same length.
+
+        ``layout`` controls the arrangement:
+
+        * ``"row"`` (default) — all figures side by side in one row.
+        * ``"column"`` — figures stacked vertically.
+        * an integer ``n`` — a grid with ``n`` columns (rows flow automatically).
+          For example, ``layout=3`` with six figures produces a 3×2 matrix.
+
+        Each figure receives its own label from the section figure counter,
+        unless custom labels are supplied. An optional ``panel_caption`` can
+        describe the whole panel.
+        """
+        if not figures:
+            raise ValueError("figure panel must contain at least one figure")
+
+        figure_paths: list[Path] = []
+        figure_captions: list[str] = []
+        figure_labels: list[str | None] = []
+        figure_widths: list[str | None] = []
+        figure_heights: list[str | None] = []
+        figure_scales: list[float | None] = []
+
+        first = figures[0]
+        if isinstance(first, dict):
+            if captions is not None:
+                raise ValueError("captions cannot be provided when figures is a list of dicts")
+            for fig in figures:
+                if not isinstance(fig, dict):
+                    raise TypeError("all figures must be dicts when the first figure is a dict")
+                path = _validate_path(fig.get("path"), "figure path", must_exist=False)
+                if path is None:
+                    raise ValueError("figure dict must contain a 'path' key")
+                caption = _validate_str(fig.get("caption", ""), "figure caption")
+                if not caption:
+                    raise ValueError("figure dict must contain a 'caption' key")
+                figure_paths.append(path)
+                figure_captions.append(caption)
+                figure_labels.append(_validate_optional_str(fig.get("label"), "figure label"))
+                figure_widths.append(_validate_optional_str(fig.get("width"), "figure width"))
+                figure_heights.append(_validate_optional_str(fig.get("height"), "figure height"))
+                scale = fig.get("scale")
+                if scale is not None and not isinstance(scale, (int, float)):
+                    raise TypeError(f"scale must be a number, got {type(scale).__name__}")
+                figure_scales.append(float(scale) if scale is not None else None)
+        else:
+            if captions is None:
+                raise ValueError("captions must be provided when figures is a list of paths")
+            if len(captions) != len(figures):
+                raise ValueError(
+                    f"figures ({len(figures)}) and captions ({len(captions)}) "
+                    "must have the same length"
+                )
+            for raw in figures:
+                if isinstance(raw, dict):
+                    raise TypeError("figures cannot mix dicts and paths")
+                path = _validate_path(raw, "figure path", must_exist=False)
+                if path is None:
+                    raise ValueError("figure path cannot be empty")
+                figure_paths.append(path)
+            figure_captions = list(captions)
+            figure_labels = [None] * len(figures)
+            figure_widths = [None] * len(figures)
+            figure_heights = [None] * len(figures)
+            figure_scales = [None] * len(figures)
+
+        if labels is not None and len(labels) != len(figures):
+            raise ValueError(
+                f"figures ({len(figures)}) and labels ({len(labels)}) must have the same length"
+            )
+        if labels is not None:
+            figure_labels = list(labels)
+
+        if isinstance(layout, str):
+            if layout not in ("row", "column"):
+                raise ValueError(f"layout must be 'row', 'column', or an int, got {layout!r}")
+            columns = len(figures) if layout == "row" else 1
+        elif isinstance(layout, int):
+            if layout < 1:
+                raise ValueError(f"layout int must be >= 1, got {layout}")
+            columns = layout
+            layout = "grid"
+        else:
+            raise TypeError(
+                f"layout must be 'row', 'column', or an int, got {type(layout).__name__}"
+            )
+
+        figure_objs: list[_Figure] = []
+        for idx, src in enumerate(figure_paths):
+            label = figure_labels[idx]
+            if label is None:
+                self._figure_counter += 1
+                label = f"Fig. {self._figure_counter}"
+            figure_objs.append(
+                _Figure(
+                    src=src,
+                    caption=figure_captions[idx],
+                    label=label,
+                    width=figure_widths[idx],
+                    height=figure_heights[idx],
+                    scale=figure_scales[idx],
+                )
+            )
+
+        self.items.append(
+            _FigurePanel(
+                figures=figure_objs,
+                layout=layout,
+                columns=columns,
+                panel_caption=_validate_optional_str(panel_caption, "panel caption"),
+                panel_label=_validate_optional_str(panel_label, "panel label"),
             )
         )
         return self
@@ -1143,28 +1308,25 @@ class Report:
         for section in self._sections:
             for item in section.items:
                 if isinstance(item, _Figure):
-                    src = item.src.resolve()
-                    if not src.exists():
-                        warnings.warn(f"Figure not found, skipping: {src}", stacklevel=2)
-                        continue
-                    if src.parent == assets:
-                        continue
-                    shutil.copy2(src, assets / src.name)
+                    self._copy_single_asset(item.src, assets, "Figure")
+                elif isinstance(item, _FigurePanel):
+                    for fig in item.figures:
+                        self._copy_single_asset(fig.src, assets, "Figure")
                 elif isinstance(item, _Download):
-                    src = item.path.resolve()
-                    if not src.exists():
-                        warnings.warn(
-                            f"Download file not found, skipping: {src}",
-                            stacklevel=2,
-                        )
-                        continue
-                    if src.parent == assets:
-                        continue
-                    shutil.copy2(src, assets / src.name)
+                    self._copy_single_asset(item.path, assets, "Download file")
         if self.logo_path and self.logo_path.exists():
             logo = self.logo_path.resolve()
             if logo.suffix.lower() != ".svg" and logo.parent != assets:
                 shutil.copy2(logo, assets / logo.name)
+
+    def _copy_single_asset(self, src: Path, assets: Path, kind: str) -> None:
+        src = src.resolve()
+        if not src.exists():
+            warnings.warn(f"{kind} not found, skipping: {src}", stacklevel=2)
+            return
+        if src.parent == assets:
+            return
+        shutil.copy2(src, assets / src.name)
 
     @staticmethod
     def _write_mathjax_include(out: Path) -> None:
