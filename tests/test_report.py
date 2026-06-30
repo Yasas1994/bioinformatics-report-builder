@@ -286,6 +286,50 @@ def test_add_figure_invalid_scale_type(tmp_report: Report) -> None:
         section.add_figure("/nonexistent/plot.png", caption="A plot", scale="half")
 
 
+def test_add_figure_svg_reference(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    svg = tmp_path / "plot.svg"
+    svg.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">'
+        '<rect width="100" height="50"/></svg>',
+        encoding="utf-8",
+    )
+    section = tmp_report.add_section("02", "Figure")
+    section.add_figure(svg, caption="An SVG plot", scale=0.5)
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert 'src="assets/plot.svg"' in text
+    assert "width:50px; height:auto; display:block;" in text
+    assert (out_dir / "assets" / "plot.svg").exists()
+
+
+def test_font_sizes_default_in_styles(out_dir: Path, tmp_report: Report) -> None:
+    tmp_report.save(out_dir)
+    styles = out_dir / "styles.html"
+    text = styles.read_text(encoding="utf-8")
+    assert "--fs-figure-caption: 0.82rem;" in text
+    assert "--fs-table-caption: 0.82rem;" in text
+
+
+def test_font_sizes_custom_override(out_dir: Path, tmp_report: Report) -> None:
+    tmp_report.font_sizes = {"figure_caption": "1rem", "table_caption": "1rem"}
+    tmp_report.save(out_dir)
+    styles = out_dir / "styles.html"
+    text = styles.read_text(encoding="utf-8")
+    assert "--fs-figure-caption: 1rem;" in text
+    assert "--fs-table-caption: 1rem;" in text
+
+
+def test_font_sizes_invalid_key(tmp_report: Report) -> None:
+    with pytest.raises(ValueError, match="font_sizes key must be one of"):
+        tmp_report.font_sizes = {"bad_key": "1rem"}
+
+
+def test_font_sizes_invalid_type(tmp_report: Report) -> None:
+    with pytest.raises(TypeError, match="font_sizes must be a dict"):
+        tmp_report.font_sizes = "large"
+
+
 def test_add_figure_width_and_height(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
     img = tmp_path / "plot.png"
     img.write_text("fake png", encoding="utf-8")

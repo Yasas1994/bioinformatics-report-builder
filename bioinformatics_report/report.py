@@ -235,10 +235,7 @@ class _Table:
         out.append("    </tbody>")
         out.append("  </table>")
         if self.caption:
-            out.append(
-                f'  <p style="font-family:var(--mono); font-size:0.58rem; '
-                f'color:var(--mist); margin-top:0.4rem">{html.escape(self.caption)}</p>'
-            )
+            out.append(f'  <p class="table-caption">{html.escape(self.caption)}</p>')
         if self.paginate and self.rows:
             out.append(self._pagination_html(table_id))
         return "\n".join(out)
@@ -741,6 +738,15 @@ class Section:
 class Report:
     """Top-level report builder."""
 
+    _DEFAULT_FONT_SIZES: dict[str, str] = {
+        "title": "1.6rem",
+        "section_title": "0.95rem",
+        "subtitle": "0.62rem",
+        "text": "0.82rem",
+        "figure_caption": "0.82rem",
+        "table_caption": "0.82rem",
+    }
+
     def __init__(
         self,
         title_line1: str = "",
@@ -760,6 +766,7 @@ class Report:
         logo_height: str = "auto",
         footer_left: str = "",
         footer_right: str = "",
+        font_sizes: dict[str, str] | None = None,
         extra_css: str | Path | None = None,
         mathjax_url: str | None = None,
         offline_mathjax: bool = False,
@@ -781,6 +788,7 @@ class Report:
         self.logo_height = _validate_str(logo_height, "logo_height")
         self.footer_left = _validate_str(footer_left, "footer_left")
         self.footer_right = _validate_str(footer_right, "footer_right")
+        self._font_sizes = self._validate_font_sizes(font_sizes)
         self.extra_css = _validate_path(extra_css, "extra_css", must_exist=False)
         self.mathjax_url = _validate_optional_str(mathjax_url, "mathjax_url")
         self.offline_mathjax = bool(offline_mathjax)
@@ -806,6 +814,47 @@ class Report:
         section = Section(number=number, title=title, count=count)
         self._sections.append(section)
         return section
+
+    @property
+    def font_sizes(self) -> dict[str, str]:
+        return dict(self._font_sizes)
+
+    @font_sizes.setter
+    def font_sizes(self, value: dict[str, str] | None) -> None:
+        self._font_sizes = self._validate_font_sizes(value)
+
+    @classmethod
+    def _validate_font_sizes(cls, font_sizes: dict[str, str] | None) -> dict[str, str]:
+        sizes = dict(cls._DEFAULT_FONT_SIZES)
+        if font_sizes is None:
+            return sizes
+        if not isinstance(font_sizes, dict):
+            raise TypeError(f"font_sizes must be a dict, got {type(font_sizes).__name__}")
+        valid = set(cls._DEFAULT_FONT_SIZES)
+        for key, value in font_sizes.items():
+            if key not in valid:
+                raise ValueError(f"font_sizes key must be one of {sorted(valid)}, got {key!r}")
+            if not isinstance(value, str):
+                raise TypeError(
+                    f"font_sizes value for {key!r} must be a string, got {type(value).__name__}"
+                )
+            sizes[key] = value
+        return sizes
+
+    def _font_size_css(self) -> str:
+        mapping = {
+            "title": "--fs-title",
+            "section_title": "--fs-section-title",
+            "subtitle": "--fs-subtitle",
+            "text": "--fs-text",
+            "figure_caption": "--fs-figure-caption",
+            "table_caption": "--fs-table-caption",
+        }
+        lines = ["<style>", ":root {"]
+        for key, var in mapping.items():
+            lines.append(f"  {var}: {self.font_sizes[key]};")
+        lines.extend(["}", "</style>"])
+        return "\n".join(lines)
 
     def set_logo(
         self,
@@ -873,6 +922,13 @@ class Report:
             src = here / name
             if src.exists():
                 shutil.copy2(src, out / name)
+        # Append dynamic font-size overrides so user-supplied sizes take effect.
+        styles = out / "styles.html"
+        if styles.exists():
+            styles.write_text(
+                styles.read_text(encoding="utf-8") + "\n" + self._font_size_css(),
+                encoding="utf-8",
+            )
         (out / "footer.html").write_text(self._build_footer_script(), encoding="utf-8")
 
     def _copy_assets(self, assets: Path) -> None:
@@ -1146,23 +1202,55 @@ MathJax = {
         lines.append("    document.querySelector(href).scrollIntoView({behavior:'smooth'});")
         lines.append("  });")
         lines.append("});")
-        lines.append("const observer = new IntersectionObserver(entries => {")
-        lines.append("  entries.forEach(entry => {")
-        lines.append("    if (entry.isIntersecting) {")
-        lines.append("      document.querySelectorAll('.nav-section-link')")
-        lines.append("        .forEach(l => l.classList.remove('active'));")
-        lines.append("      const id = entry.target.id;")
-        lines.append("      const selector = '.nav-section-link[href=\"#' + id + '\"]';")
-        lines.append("      const active = document.querySelector(selector);")
-        lines.append("      if (active) {")
-        lines.append("        active.classList.add('active');")
-        lines.append("        active.closest('li').classList.add('open');")
-        lines.append("      }")
+        lines.append("const targets = Array.from(")
+        lines.append("  document.querySelectorAll('.report-section, .sub-head')")
+        lines.append(");")
+        lines.append("const navLinks = Array.from(")
+        lines.append("  document.querySelectorAll('.nav-section-link, .nav-sub a')")
+        lines.append(");")
+        lines.append("const sectionItems = Array.from(")
+        lines.append("  document.querySelectorAll('.nav-index > li')")
+        lines.append(");")
+        lines.append("")
+        lines.append("function activeTarget() {")
+        lines.append("  const threshold = window.innerHeight * 0.2;")
+        lines.append("  let best = null;")
+        lines.append("  for (const target of targets) {")
+        lines.append("    const top = target.getBoundingClientRect().top;")
+        lines.append("    if (top <= threshold && (!best || top > best.top)) {")
+        lines.append("      best = { target, top };")
         lines.append("    }")
-        lines.append("  });")
-        lines.append("}, {threshold: 0.5});")
-        lines.append("document.querySelectorAll('.report-section')")
-        lines.append("  .forEach(s => observer.observe(s));")
+        lines.append("  }")
+        lines.append("  return best ? best.target : targets[0] || null;")
+        lines.append("}")
+        lines.append("")
+        lines.append("function updateNav() {")
+        lines.append("  const target = activeTarget();")
+        lines.append("  navLinks.forEach(a => a.classList.remove('active'));")
+        lines.append("  sectionItems.forEach(li => li.classList.remove('open'));")
+        lines.append("  if (!target) return;")
+        lines.append("  const id = target.id;")
+        lines.append("  const sel = '.nav-section-link[href=\"#' + id + '\"], ' +")
+        lines.append("              '.nav-sub a[href=\"#' + id + '\"]'")
+        lines.append("  const link = document.querySelector(sel)")
+        lines.append("  if (!link) return;")
+        lines.append("  link.classList.add('active');")
+        lines.append("  const li = link.closest('.nav-index > li');")
+        lines.append("  if (li) li.classList.add('open');")
+        lines.append("  if (target.classList.contains('sub-head')) {")
+        lines.append("    const sectionLink = li && li.querySelector('.nav-section-link');")
+        lines.append("    if (sectionLink) sectionLink.classList.add('active');")
+        lines.append("  }")
+        lines.append("}")
+        lines.append("")
+        lines.append("let ticking = false;")
+        lines.append("window.addEventListener('scroll', () => {")
+        lines.append("  if (!ticking) {")
+        lines.append("    window.requestAnimationFrame(() => { updateNav(); ticking = false; });")
+        lines.append("    ticking = true;")
+        lines.append("  }")
+        lines.append("}, { passive: true });")
+        lines.append("updateNav();")
         lines.append("")
         lines.append("// Client-side table pagination")
         lines.append("document.querySelectorAll('.table-pager').forEach(pager => {")

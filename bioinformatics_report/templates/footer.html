@@ -15,31 +15,54 @@
     }
   }
 
-  const targets = document.querySelectorAll('[id]');
-  const subLinks = document.querySelectorAll('.nav-sub a');
+  // Robust scroll-spy: highlight the section/subsection whose top is closest
+  // to (but above) 20% of the viewport. Falls back to the first target when
+  // scrolled back to the top.
+  const targets = Array.from(document.querySelectorAll('.report-section, .sub-head'));
+  const navLinks = Array.from(document.querySelectorAll('.nav-section-link, .nav-sub a'));
+  const sectionItems = Array.from(document.querySelectorAll('.nav-index > li'));
 
-  const obs = new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (!e.isIntersecting) return;
-      const id = e.target.id;
-      subLinks.forEach(a => a.classList.remove('active'));
-      const match = document.querySelector(`.nav-sub a[href="#${id}"]`);
-      if (match) {
-        match.classList.add('active');
-        const li = match.closest('.nav-index > li');
-        document.querySelectorAll('.nav-index > li').forEach(l => {
-          l.classList.remove('open');
-          const link = l.querySelector('.nav-section-link');
-          if (link) link.classList.remove('active');
-        });
-        li.classList.add('open');
-        const sectionLink = li.querySelector('.nav-section-link');
-        if (sectionLink) sectionLink.classList.add('active');
+  function activeTarget() {
+    const threshold = window.innerHeight * 0.2;
+    let best = null;
+    for (const target of targets) {
+      const top = target.getBoundingClientRect().top;
+      if (top <= threshold && (!best || top > best.top)) {
+        best = { target, top };
       }
-    });
-  }, { rootMargin: '-10% 0px -80% 0px' });
+    }
+    return best ? best.target : targets[0] || null;
+  }
 
-  targets.forEach(t => obs.observe(t));
+  function updateNav() {
+    const target = activeTarget();
+    navLinks.forEach(a => a.classList.remove('active'));
+    sectionItems.forEach(li => li.classList.remove('open'));
+
+    if (!target) return;
+    const id = target.id;
+    const link = document.querySelector(`.nav-section-link[href="#${id}"], .nav-sub a[href="#${id}"]`);
+    if (!link) return;
+
+    link.classList.add('active');
+    const li = link.closest('.nav-index > li');
+    if (li) li.classList.add('open');
+
+    // Also highlight the parent section link when a subsection is active.
+    if (target.classList.contains('sub-head')) {
+      const sectionLink = li && li.querySelector('.nav-section-link');
+      if (sectionLink) sectionLink.classList.add('active');
+    }
+  }
+
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      window.requestAnimationFrame(() => { updateNav(); ticking = false; });
+      ticking = true;
+    }
+  }, { passive: true });
+  updateNav();
 
   // Client-side table pagination
   document.querySelectorAll('.table-pager').forEach(pager => {

@@ -172,6 +172,7 @@ Report(
 | `logo_alt` | Accessible `alt` text for non-SVG logos. |
 | `logo_width`, `logo_height` | Logo size in the sidebar. |
 | `footer_left`, `footer_right` | Text in the page footer. |
+| `font_sizes` | Dict of font sizes for `title`, `section_title`, `subtitle`, `text`, `figure_caption`, `table_caption`. Defaults keep body text and captions the same size. |
 | `extra_css` | Path to a CSS file or raw CSS text included in the report. |
 | `mathjax_url` | Override the MathJax URL used for LaTeX rendering. |
 | `offline_mathjax` | Copy a local MathJax `tex-chtml.js` to `assets/` if found. |
@@ -201,7 +202,7 @@ chaining.
 | `add_notice(tag, text, kind="info" \| "warn")` | Add an info/warn notice strip. |
 | `add_table(headers, rows, df, caption="", col_classes=..., cell_classes=..., paginate=False, page_size=25)` | Add a data table. Provide `headers`+`rows` **or** a pandas `df`. `cell_classes` should have the same shape as `rows`. Set `paginate=True` for client-side pagination. |
 | `add_freq_bars(data, low_threshold=15.0)` | Add a minimal horizontal bar chart from `(label, percent)` tuples. |
-| `add_figure(path, caption, label=None, width=None, height=None, scale=None)` | Reference a figure; the file is copied to `assets/`. Native size by default. Pass `width`/`height` for explicit dimensions, or `scale` (e.g. `0.5`) to size relative to the image's intrinsic pixel dimensions. |
+| `add_figure(path, caption, label=None, width=None, height=None, scale=None)` | Reference a PNG, JPG or SVG figure; the file is copied to `assets/` (SVGs are referenced via `<img>`). Native size by default. Pass `width`/`height` for explicit dimensions, or `scale` (e.g. `0.5`) to size relative to the image's intrinsic pixel dimensions. |
 | `add_code(language, code, open=False)` | Add a collapsible code block. Hidden by default; pass `open=True` to reveal it on load. |
 | `add_latex(tex, display=False)` | Add inline or display LaTeX. MathJax is loaded automatically. |
 | `add_references(citations)` | Add a numbered reference list. |
@@ -282,6 +283,28 @@ report = Report(
     extra_css=".masthead { background: #f0f4fa; }",
 )
 ```
+
+### Adjust font sizes globally
+
+Pass a `font_sizes` dict to set sizes for titles, subtitles, body text and
+captions. Any keys you omit keep their defaults.
+
+```python
+report = Report(
+    title_line1="My Report",
+    title_line2="Analysis Report",
+    font_sizes={
+        "title": "1.8rem",
+        "section_title": "1.1rem",
+        "subtitle": "0.75rem",
+        "text": "0.9rem",
+        "figure_caption": "0.9rem",
+        "table_caption": "0.9rem",
+    },
+)
+```
+
+By default figure and table captions now match the body-text size.
 
 ### Paginate long tables
 
