@@ -572,15 +572,21 @@ main {
 pre.sourceCode,
 code.sourceCode {
   background: var(--page) !important;
-  border-left: 2px solid var(--navy);
+  border-left: none !important;
   padding: 1rem 1.25rem !important;
   font-family: var(--mono) !important;
   font-size: 0.72rem !important;
   line-height: 1.7 !important;
   overflow-x: auto;
   color: var(--deep) !important;
-  margin: 0.75rem 0 !important;
+  margin: 0 !important;
   border-radius: 0 !important;
+}
+
+.code-collapsible pre.sourceCode,
+.code-collapsible code.sourceCode {
+  border-left: none !important;
+  margin: 0 !important;
 }
 
 .kw { color: var(--navy); }
