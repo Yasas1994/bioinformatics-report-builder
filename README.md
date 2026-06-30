@@ -327,21 +327,40 @@ report = Report(
 )
 ```
 
-### Make subsection headings bold
+### Style subsection headings
 
-Subsection headings such as **3.2 Reproducibility** are normal weight by
-default. Use `font_weights` to make them bold:
+Subsection headings such as **3.2 Reproducibility** use a monospace font and
+normal weight by default. To make them larger, bold, and use the same font as
+section headings, override `.sub-head` with `extra_css`:
 
 ```python
 report = Report(
     title_line1="My Report",
     title_line2="Analysis Report",
-    font_weights={"subtitle": "700"},
+    extra_css="""
+.sub-head {
+  font-family: var(--sans);
+  font-size: var(--fs-section-title);
+  font-weight: 600;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+""",
 )
 ```
 
-`font_weights` accepts the same keys as `font_sizes`:
-`title`, `section_title`, `subtitle`, `text`, `figure_caption`, `table_caption`.
+If you only want to change the size and weight, use `font_sizes` and
+`font_weights`:
+
+```python
+report = Report(
+    title_line1="My Report",
+    title_line2="Analysis Report",
+    font_sizes={"subtitle": "0.95rem"},
+    font_weights={"subtitle": "700"},
+)
+```
 
 ### Add tables
 
