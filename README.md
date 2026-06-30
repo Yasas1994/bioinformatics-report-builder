@@ -1,14 +1,18 @@
-# Bioinformatics Report Template
+# Report Template
 
 A general-purpose, Quarto-based HTML report template and a Python builder for
-bioinformatics workflows (metagenomics, single-cell RNA-seq, spatial
-transcriptomics, multi-omics, etc.).
+branded technical reports.
+
+It ships with bioinformatics workflow examples (metagenomics, single-cell
+RNA-seq, spatial transcriptomics, multi-omics), but the builder itself is
+domain-agnostic: company logo, masthead metadata, sidebar labels, footer text
+and colours are all configurable.
 
 The template provides a clean, branded report layout (sticky sidebar navigation,
-masthead metadata ledger, metric strips, tables, minimal bar charts, figure
-boxes, code blocks and references) and produces a standalone HTML file. Figures
-are kept as linked files in an `assets/` directory. The company or institution
-logo is fully configurable.
+masthead metadata ledger, metric strips, tables, minimal bar charts, figures,
+code blocks and references) and produces a standalone HTML file. Figures are
+kept as linked files in an `assets/` directory. The logo is fully swappable via
+`Report.set_logo()`.
 
 ## Installation
 
@@ -337,7 +341,7 @@ section.add_figure("umap.png", caption="UMAP embedding", width="600px", height="
 ```
 
 When both `width` and `height` are given, `object-fit: contain` keeps the
-aspect ratio.
+aspect ratio. Figures render without a surrounding border by default.
 
 ## Workflow examples
 
