@@ -91,7 +91,7 @@ qc.add_table(
 
 clustering = report.add_section("03", "Clustering", count="Scanpy · Leiden")
 clustering.add_subsection("UMAP", "s3-umap")
-clustering.add_figure(fig_path, caption="UMAP embedding coloured by Leiden cluster.", width="50%")
+clustering.add_figure(fig_path, caption="UMAP embedding coloured by Leiden cluster.", scale=0.5)
 clustering.add_subsection("Reproducibility", "s3-code")
 clustering.add_code(
     "python",

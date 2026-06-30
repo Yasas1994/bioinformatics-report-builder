@@ -248,6 +248,44 @@ def test_add_code_invalid_open_type(tmp_report: Report) -> None:
         section.add_code("python", "x = 1", open="yes")
 
 
+def test_add_figure_scale_png(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    import struct
+
+    img = tmp_path / "plot.png"
+    # Minimal 2x2 PNG
+    img.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + b"\x00\x00\x00\x0dIHDR"
+        + struct.pack(">II", 400, 300)
+        + b"\x08\x02\x00\x00\x00"
+        + b"\x90\x91\x68\x36"
+        + b"\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    section = tmp_report.add_section("02", "Figure")
+    section.add_figure(img, caption="A plot", scale=0.5)
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert 'style="width:200px; height:auto; display:block;"' in text
+
+
+def test_add_figure_scale_unknown_dims(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
+    img = tmp_path / "plot.gif"
+    img.write_text("not an image", encoding="utf-8")
+    section = tmp_report.add_section("02", "Figure")
+    section.add_figure(img, caption="A plot", scale=0.5)
+    tmp_report.save(out_dir)
+    qmd = out_dir / "report.qmd"
+    text = qmd.read_text(encoding="utf-8")
+    assert 'style="width:50%; height:auto; display:block;"' in text
+
+
+def test_add_figure_invalid_scale_type(tmp_report: Report) -> None:
+    section = tmp_report.add_section("02", "Figure")
+    with pytest.raises(TypeError, match="scale must be a number"):
+        section.add_figure("/nonexistent/plot.png", caption="A plot", scale="half")
+
+
 def test_add_figure_width_and_height(out_dir: Path, tmp_path: Path, tmp_report: Report) -> None:
     img = tmp_path / "plot.png"
     img.write_text("fake png", encoding="utf-8")

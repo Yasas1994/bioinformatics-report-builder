@@ -53,6 +53,64 @@ def _validate_bool(value: Any, name: str) -> bool:
     return value
 
 
+def _image_dimensions(path: Path) -> tuple[int, int] | None:
+    """Return (width, height) in pixels for PNG/JPG/SVG files, or None."""
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return None
+
+    # PNG
+    if data.startswith(b"\x89PNG\r\n\x1a\n") and len(data) >= 24:
+        width = int.from_bytes(data[16:20], "big")
+        height = int.from_bytes(data[20:24], "big")
+        return width, height
+
+    # JPEG
+    if data.startswith(b"\xff\xd8"):
+        idx = 2
+        while idx < len(data) - 9:
+            if data[idx] == 0xFF and data[idx + 1] in (0xC0, 0xC2):
+                height = int.from_bytes(data[idx + 5 : idx + 7], "big")
+                width = int.from_bytes(data[idx + 7 : idx + 9], "big")
+                return width, height
+            if data[idx] == 0xFF and data[idx + 1] != 0x00:
+                length = int.from_bytes(data[idx + 2 : idx + 4], "big")
+                idx += 2 + length
+            else:
+                idx += 1
+        return None
+
+    # SVG
+    if path.suffix.lower() == ".svg":
+        text = data.decode("utf-8", errors="ignore")
+        width_match = re.search(r'<svg[^>]*?\swidth=["\']([0-9.]+)["\']', text, re.IGNORECASE)
+        height_match = re.search(r'<svg[^>]*?\sheight=["\']([0-9.]+)["\']', text, re.IGNORECASE)
+        viewbox_match = re.search(r'<svg[^>]*?\sviewBox=["\']([^"\']+)["\']', text, re.IGNORECASE)
+
+        def _parse_num(s: str) -> int | None:
+            try:
+                return int(float(s))
+            except ValueError:
+                return None
+
+        w = width_match and _parse_num(width_match.group(1))
+        h = height_match and _parse_num(height_match.group(1))
+
+        if w and h:
+            return w, h
+
+        if viewbox_match:
+            parts = viewbox_match.group(1).split()
+            if len(parts) == 4:
+                vw = _parse_num(parts[2])
+                vh = _parse_num(parts[3])
+                if vw and vh:
+                    return vw, vh
+
+    return None
+
+
 def _cell_text(value: Any) -> str:
     if value is None:
         return ""
@@ -226,12 +284,21 @@ class _Figure:
     label: str
     width: str | None = None
     height: str | None = None
+    scale: float | None = None
 
     def render(self, section: Section, asset_rel_prefix: str) -> str:
         src = f"{asset_rel_prefix}{self.src.name}"
         width = html.escape(self.width) if self.width else None
         height = html.escape(self.height) if self.height else None
-        if width and height:
+        if self.scale is not None:
+            dims = _image_dimensions(self.src)
+            if dims:
+                scaled_width = int(dims[0] * self.scale)
+                style = f"width:{scaled_width}px; height:auto; display:block;"
+            else:
+                pct = int(self.scale * 100)
+                style = f"width:{pct}%; height:auto; display:block;"
+        elif width and height:
             style = f"width:{width}; height:{height}; object-fit:contain; display:block;"
         elif width:
             style = f"width:{width}; height:auto; display:block;"
@@ -511,6 +578,7 @@ class Section:
         label: str | None = None,
         width: str | None = None,
         height: str | None = None,
+        scale: float | None = None,
     ) -> Section:
         """Reference a figure.  It will be copied to the report assets dir.
 
@@ -519,6 +587,11 @@ class Section:
         or ``"80%"``) and/or ``height`` (e.g. ``"400px"``) to force specific
         display dimensions. When both are given, ``object-fit: contain`` keeps
         the aspect ratio.
+
+        Alternatively, pass ``scale`` (e.g. ``0.5`` or ``1.5``) to size the
+        figure relative to its intrinsic pixel dimensions. If the intrinsic
+        size cannot be read, ``scale`` falls back to a percentage of the
+        content column.
         """
         valid_path = _validate_path(path, "figure path", must_exist=False)
         if valid_path is None:
@@ -532,6 +605,8 @@ class Section:
             width = _validate_str(width, "figure width")
         if height is not None:
             height = _validate_str(height, "figure height")
+        if scale is not None and not isinstance(scale, (int, float)):
+            raise TypeError(f"scale must be a number, got {type(scale).__name__}")
         self.items.append(
             _Figure(
                 src=valid_path,
@@ -539,6 +614,7 @@ class Section:
                 label=label,
                 width=width,
                 height=height,
+                scale=float(scale) if scale is not None else None,
             )
         )
         return self

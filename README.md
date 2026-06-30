@@ -201,7 +201,7 @@ chaining.
 | `add_notice(tag, text, kind="info" \| "warn")` | Add an info/warn notice strip. |
 | `add_table(headers, rows, df, caption="", col_classes=..., cell_classes=..., paginate=False, page_size=25)` | Add a data table. Provide `headers`+`rows` **or** a pandas `df`. `cell_classes` should have the same shape as `rows`. Set `paginate=True` for client-side pagination. |
 | `add_freq_bars(data, low_threshold=15.0)` | Add a minimal horizontal bar chart from `(label, percent)` tuples. |
-| `add_figure(path, caption, label=None, width=None, height=None)` | Reference a figure; the file is copied to `assets/`. Native size by default. Pass `width` and/or `height` to set display dimensions; both together use `object-fit: contain`. |
+| `add_figure(path, caption, label=None, width=None, height=None, scale=None)` | Reference a figure; the file is copied to `assets/`. Native size by default. Pass `width`/`height` for explicit dimensions, or `scale` (e.g. `0.5`) to size relative to the image's intrinsic pixel dimensions. |
 | `add_code(language, code, open=False)` | Add a collapsible code block. Hidden by default; pass `open=True` to reveal it on load. |
 | `add_latex(tex, display=False)` | Add inline or display LaTeX. MathJax is loaded automatically. |
 | `add_references(citations)` | Add a numbered reference list. |
@@ -341,7 +341,19 @@ section.add_figure("umap.png", caption="UMAP embedding", width="600px", height="
 ```
 
 When both `width` and `height` are given, `object-fit: contain` keeps the
-aspect ratio. Figures render without a surrounding border by default.
+aspect ratio.
+
+Use `scale` to size the figure relative to its intrinsic pixel dimensions:
+
+```python
+section.add_figure("umap.png", caption="UMAP embedding", scale=0.5)
+section.add_figure("umap.png", caption="UMAP embedding", scale=1.5)
+```
+
+If the intrinsic size cannot be read, `scale` falls back to a percentage of
+the content column.
+
+Figures render without a surrounding border by default.
 
 ## Workflow examples
 
